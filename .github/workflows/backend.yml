@@ -57,8 +57,9 @@ jobs:
       - name: Run Pytest Suite
         run: |
           cd backend
-          pytest tests/ -v --cov=. --cov-report=xml
+          python -m pytest tests/ -v --cov=. --cov-report=xml
         env:
+          PYTHONPATH: .
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/raktasetu_test
           DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/raktasetu_test
           REDIS_URL: redis://localhost:6379
