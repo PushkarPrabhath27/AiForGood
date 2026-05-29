@@ -1,0 +1,124 @@
+# ==========================================
+# RaktaSetu NOOR - Git Ignore Configuration
+# ==========================================
+
+# Environment Configuration (CRITICAL - Prevent Secret Leaks)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+!.env.example
+
+# Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+lib/
+lib64/
+bin/
+include/
+share/
+pyvenv.cfg
+pip-selfcheck.json
+
+# Python Caches and Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing and Coverage
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+htmlcov/
+.hypothesis/
+.ruamel_yaml_cache/
+
+# Type Checking Caches
+.mypy_cache/
+.pyre/
+.pytype/
+
+# SQLite Databases (CRITICAL - Do not track local data state)
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite3
+raktasetu.db
+backend/raktasetu.db
+
+# OS-Specific Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE and Editor Configurations
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+*.bak
+
+# Node / Frontend Caches and Dependencies (If added later)
+node_modules/
+/jspm_packages/
+.npm
+.eslintcache
+.stylelintcache
+.next/
+out/
+.docusaurus/
+.cache/
+.parcel-cache/
+.turbo/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker Local Overrides
+docker-compose.override.yml

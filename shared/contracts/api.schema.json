@@ -1,0 +1,1413 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RaktaSetu NOOR",
+    "description": "Empathetic, Predictive Blood Management Infrastructure for Thalassemia Care.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System Diagnostics"
+        ],
+        "summary": "Health Check",
+        "description": "Returns standard 200 response mapping system availability status.\n\nReturns:\n    dict: Standard health envelope {\"status\": \"ok\", \"version\": \"1.0.0\"}",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}/forecast": {
+      "get": {
+        "tags": [
+          "Forecasting"
+        ],
+        "summary": "Get Patient Forecast",
+        "description": "Retrieves or generates a clinical hemoglobin decay forecast and diagnostic alerts.\n\nChecks the Redis cache first for fresh predictions. On a cache miss, trains a\nFacebook Prophet model, computes sequential CUSUM alloimmunization, evaluates iron overload,\ncaches results, and updates patient prediction metadata.\n\nArgs:\n    patient_id: Unique identifier for the patient.\n    db: Async database session.\n    \nReturns:\n    ApiResponse containing the full clinical ForecastResponse.",
+        "operationId": "get_patient_forecast_api_v1_patients__patient_id__forecast_get",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ForecastResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}/guardian-circle": {
+      "get": {
+        "tags": [
+          "Guardians"
+        ],
+        "summary": "Get Patient Guardian Circle",
+        "description": "Retrieves the clinical guardian circle details, continuous health scores,\nand current T-minus countdown mobilization states.\n\nArgs:\n    patient_id: Unique database identifier of the patient.\n    db: Async database session.\n    \nReturns:\n    ApiResponse containing the detailed GuardianCircleResponse.",
+        "operationId": "get_patient_guardian_circle_api_v1_patients__patient_id__guardian_circle_get",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_GuardianCircleResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}/guardian-circle/mobilize": {
+      "post": {
+        "tags": [
+          "Guardians"
+        ],
+        "summary": "Mobilize Guardian Circle",
+        "description": "Manually activates the mobilization sequence for the patient's network.\nIf Suresh is pending, transitions his status to active and updates calculations.\n\nArgs:\n    patient_id: Unique database identifier of the patient.\n    db: Async database session.\n    \nReturns:\n    ApiResponse containing the updated MobilizationStatusResponse.",
+        "operationId": "mobilize_guardian_circle_api_v1_patients__patient_id__guardian_circle_mobilize_post",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_MobilizationStatusResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}/alerts/{alert_id}/notify": {
+      "post": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Notify Patient Alert",
+        "description": "Triggers an empathetic notification to the patient's primary guardian regarding a clinical alert.\nFetches details, formats dynamic context, calls Claude, and dispatches via Twilio.\n\nArgs:\n    patient_id (str): Unique database identifier of the patient.\n    alert_id (str): Unique database identifier of the clinical alert.\n    db (AsyncSession): Active async database session.\n\nReturns:\n    ApiResponse containing the NotifyAlertResponse details.",
+        "operationId": "notify_patient_alert_api_v1_patients__patient_id__alerts__alert_id__notify_post",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          },
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_NotifyAlertResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grid/city/{city_code}": {
+      "get": {
+        "tags": [
+          "RaktaGrid Optimization"
+        ],
+        "summary": "Get City Grid",
+        "description": "Retrieves the city-wide optimization grid including blood bank nodes,\ncalculated transfer matches, coverage percentages, and total inventory summaries.\nEnforces Redis caching with a 6-hour TTL.",
+        "operationId": "get_city_grid_api_v1_grid_city__city_code__get",
+        "parameters": [
+          {
+            "name": "city_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "City Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CityInventoryResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grid/matches/{match_id}/approve": {
+      "post": {
+        "tags": [
+          "RaktaGrid Optimization"
+        ],
+        "summary": "Approve Transfer Match",
+        "description": "Approves a blood transfer match, decrements available inventory units in the DB,\nand invalidates the city grid Redis cache.",
+        "operationId": "approve_transfer_match_api_v1_grid_matches__match_id__approve_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_str_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grid/banks/{bank_id}/inventory": {
+      "post": {
+        "tags": [
+          "RaktaGrid Optimization"
+        ],
+        "summary": "Sync Blood Bank Inventory Endpoint",
+        "description": "Bulk upserts a blood bank's inventory using structured inputs,\nand invalidates the associated city's grid cache.",
+        "operationId": "sync_blood_bank_inventory_endpoint_api_v1_grid_banks__bank_id__inventory_post",
+        "parameters": [
+          {
+            "name": "bank_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Bank Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkInventoryUpsertSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_str_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chatbot/message": {
+      "post": {
+        "tags": [
+          "Saathi Chatbot"
+        ],
+        "summary": "Handle Chatbot Message",
+        "description": "Handles virtual coordination questions from guardians and donors.\nExtracts intents using standard regex pattern matching and returns DB-sourced replies.\n\nArgs:\n    payload (ChatbotMessageRequest): Input message content with optional patient/guardian contexts.\n    db (AsyncSession): Active async database session.\n\nReturns:\n    ApiResponse containing the ChatbotMessageResponse.",
+        "operationId": "handle_chatbot_message_api_v1_chatbot_message_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatbotMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ChatbotMessageResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root Redirect",
+        "description": "Redirects to root health information.",
+        "operationId": "root_redirect__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertFlagSchema": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "iron_overload",
+              "alloimmunization",
+              "rapid_decline",
+              "circle_degraded",
+              "inventory_shortage"
+            ],
+            "title": "Type"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "severity",
+          "message",
+          "recommended_action",
+          "detected_at"
+        ],
+        "title": "AlertFlagSchema",
+        "description": "Clinical and logistical warning alert envelope."
+      },
+      "ApiError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiError",
+        "description": "Standard error envelope for API failure responses."
+      },
+      "ApiResponse_ChatbotMessageResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatbotMessageResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[ChatbotMessageResponse]"
+      },
+      "ApiResponse_CityInventoryResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CityInventoryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[CityInventoryResponse]"
+      },
+      "ApiResponse_ForecastResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[ForecastResponse]"
+      },
+      "ApiResponse_GuardianCircleResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuardianCircleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[GuardianCircleResponse]"
+      },
+      "ApiResponse_MobilizationStatusResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MobilizationStatusResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[MobilizationStatusResponse]"
+      },
+      "ApiResponse_NotifyAlertResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotifyAlertResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[NotifyAlertResponse]"
+      },
+      "ApiResponse_str_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[str]"
+      },
+      "BloodBankNodeSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lng": {
+            "type": "number",
+            "title": "Lng"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "city",
+          "lat",
+          "lng"
+        ],
+        "title": "BloodBankNodeSchema",
+        "description": "Schema representing a blood bank node in the optimization grid."
+      },
+      "BulkInventoryUpsertSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryItemSchema"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "BulkInventoryUpsertSchema",
+        "description": "Payload schema for bulk upserting a blood bank's inventory."
+      },
+      "ChatbotMessageRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Message string inputted by the user or donor"
+          },
+          "patient_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Id",
+            "description": "Optional unique identifier of the patient context"
+          },
+          "guardian_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardian Id",
+            "description": "Optional unique identifier of the guardian context"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Preferred language for the response (e.g. en, te)",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatbotMessageRequest",
+        "description": "Schema for incoming messages sent to the Saathi virtual coordinator assistant."
+      },
+      "ChatbotMessageResponse": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply",
+            "description": "Empathetic reply message from Saathi assistant"
+          },
+          "context_retrieved": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Context Retrieved",
+            "description": "Key-value dictionary showing metadata or clinical database records queried to form the answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply"
+        ],
+        "title": "ChatbotMessageResponse",
+        "description": "Schema for the chatbot response containing the virtual assistant's reply and clinical context."
+      },
+      "CityInventoryResponse": {
+        "properties": {
+          "banks": {
+            "items": {
+              "$ref": "#/components/schemas/BloodBankNodeSchema"
+            },
+            "type": "array",
+            "title": "Banks"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryMatchSchema"
+            },
+            "type": "array",
+            "title": "Matches"
+          },
+          "city_health_score": {
+            "type": "integer",
+            "title": "City Health Score"
+          },
+          "coverage_pct": {
+            "type": "number",
+            "title": "Coverage Pct"
+          },
+          "inventory_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Inventory Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "banks",
+          "matches",
+          "city_health_score",
+          "coverage_pct",
+          "inventory_summary"
+        ],
+        "title": "CityInventoryResponse",
+        "description": "Schema representing the optimization summary and mappings for a city."
+      },
+      "ForecastPointSchema": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "hb_predicted": {
+            "type": "number",
+            "title": "Hb Predicted"
+          },
+          "ci_lower": {
+            "type": "number",
+            "title": "Ci Lower"
+          },
+          "ci_upper": {
+            "type": "number",
+            "title": "Ci Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "hb_predicted",
+          "ci_lower",
+          "ci_upper"
+        ],
+        "title": "ForecastPointSchema",
+        "description": "Strict schema mapping individual daily forecast coordinates for the 60-day prediction curve."
+      },
+      "ForecastResponse": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "historical_readings": {
+            "items": {
+              "$ref": "#/components/schemas/HbReadingSchema"
+            },
+            "type": "array",
+            "title": "Historical Readings"
+          },
+          "forecast_points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPointSchema"
+            },
+            "type": "array",
+            "title": "Forecast Points"
+          },
+          "predicted_transfusion_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Predicted Transfusion Date"
+          },
+          "confidence_lower": {
+            "type": "string",
+            "format": "date",
+            "title": "Confidence Lower"
+          },
+          "confidence_upper": {
+            "type": "string",
+            "format": "date",
+            "title": "Confidence Upper"
+          },
+          "confidence_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence Pct"
+          },
+          "alert_flags": {
+            "items": {
+              "$ref": "#/components/schemas/AlertFlagSchema"
+            },
+            "type": "array",
+            "title": "Alert Flags"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "insufficient_data",
+              "model_error",
+              "cached"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "historical_readings",
+          "forecast_points",
+          "predicted_transfusion_date",
+          "confidence_lower",
+          "confidence_upper",
+          "confidence_pct",
+          "alert_flags",
+          "model_version",
+          "generated_at",
+          "status"
+        ],
+        "title": "ForecastResponse",
+        "description": "Complete clinical diagnostic output from the NOOR forecasting pipeline."
+      },
+      "GuardianCircleResponse": {
+        "properties": {
+          "coverage_score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Coverage Score"
+          },
+          "engagement_score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Engagement Score"
+          },
+          "resilience_score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Resilience Score"
+          },
+          "mobilization_status": {
+            "type": "string",
+            "title": "Mobilization Status"
+          },
+          "days_to_transfusion": {
+            "type": "integer",
+            "title": "Days To Transfusion"
+          },
+          "guardians": {
+            "items": {
+              "$ref": "#/components/schemas/GuardianSchema"
+            },
+            "type": "array",
+            "title": "Guardians"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coverage_score",
+          "engagement_score",
+          "resilience_score",
+          "mobilization_status",
+          "days_to_transfusion",
+          "guardians"
+        ],
+        "title": "GuardianCircleResponse",
+        "description": "Structured clinical response envelope for patients' RaktaMitra circles,\nincorporating coverage, engagement, and pair-survivability resilience metrics."
+      },
+      "GuardianSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_donation_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Donation Date"
+          },
+          "next_eligible_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Eligible Date"
+          },
+          "donation_count": {
+            "type": "integer",
+            "title": "Donation Count"
+          },
+          "response_latency_avg_hours": {
+            "type": "number",
+            "title": "Response Latency Avg Hours"
+          },
+          "preferred_language": {
+            "type": "string",
+            "title": "Preferred Language"
+          },
+          "compatibility_score": {
+            "type": "integer",
+            "title": "Compatibility Score"
+          },
+          "reliability_score": {
+            "type": "integer",
+            "title": "Reliability Score"
+          },
+          "geography_score": {
+            "type": "integer",
+            "title": "Geography Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "name",
+          "phone",
+          "role",
+          "status",
+          "donation_count",
+          "response_latency_avg_hours",
+          "preferred_language",
+          "compatibility_score",
+          "reliability_score",
+          "geography_score"
+        ],
+        "title": "GuardianSchema",
+        "description": "Strict schema representing a circle member or rare specialist candidate.\nEnforces privacy by masking phone numbers at the serialization boundary."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HbReadingSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "hb_value": {
+            "type": "number",
+            "title": "Hb Value"
+          },
+          "reading_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Reading Date"
+          },
+          "post_transfusion": {
+            "type": "boolean",
+            "title": "Post Transfusion"
+          },
+          "units_transfused": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units Transfused"
+          },
+          "hb_rise_per_unit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hb Rise Per Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "hb_value",
+          "reading_date",
+          "post_transfusion"
+        ],
+        "title": "HbReadingSchema",
+        "description": "Strict Pydantic schema representing individual patient hemoglobin log records.\nEnsures precise dates are serialized as GFM-compliant ISO strings."
+      },
+      "InventoryItemSchema": {
+        "properties": {
+          "blood_type": {
+            "type": "string",
+            "title": "Blood Type",
+            "description": "ABO grouping, e.g., 'A', 'B', 'AB', 'O'"
+          },
+          "rh_factor": {
+            "type": "string",
+            "title": "Rh Factor",
+            "description": "Rh factor: '+' or '-'"
+          },
+          "units_available": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Units Available",
+            "description": "Number of units available"
+          },
+          "kell": {
+            "type": "boolean",
+            "title": "Kell",
+            "description": "Is Kell-negative",
+            "default": false
+          },
+          "duffy": {
+            "type": "boolean",
+            "title": "Duffy",
+            "description": "Is Duffy-negative",
+            "default": false
+          },
+          "kidd": {
+            "type": "boolean",
+            "title": "Kidd",
+            "description": "Is Kidd-negative",
+            "default": false
+          },
+          "collection_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collection Date",
+            "description": "Collection timestamp"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiry Date",
+            "description": "Expiry timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blood_type",
+          "rh_factor",
+          "units_available",
+          "collection_date",
+          "expiry_date"
+        ],
+        "title": "InventoryItemSchema",
+        "description": "Schema for a single inventory item to ingest or update."
+      },
+      "InventoryMatchSchema": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "patient_name": {
+            "type": "string",
+            "title": "Patient Name"
+          },
+          "bank_id": {
+            "type": "string",
+            "title": "Bank Id"
+          },
+          "bank_name": {
+            "type": "string",
+            "title": "Bank Name"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "blood_type": {
+            "type": "string",
+            "title": "Blood Type"
+          },
+          "rh_factor": {
+            "type": "string",
+            "title": "Rh Factor"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiry Date"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "patient_name",
+          "bank_id",
+          "bank_name",
+          "unit_id",
+          "blood_type",
+          "rh_factor",
+          "expiry_date",
+          "distance_km",
+          "status"
+        ],
+        "title": "InventoryMatchSchema",
+        "description": "Schema representing a single clinical inventory-to-patient transfer match."
+      },
+      "MobilizationStatusResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "days_to_transfusion": {
+            "type": "integer",
+            "title": "Days To Transfusion"
+          },
+          "confirmed_count": {
+            "type": "integer",
+            "title": "Confirmed Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "days_to_transfusion",
+          "confirmed_count",
+          "total_count"
+        ],
+        "title": "MobilizationStatusResponse",
+        "description": "Response envelope containing current T-minus countdown details."
+      },
+      "NotifyAlertResponse": {
+        "properties": {
+          "delivery_status": {
+            "type": "string",
+            "title": "Delivery Status",
+            "description": "Delivery status of the alert (e.g. sent, mock_sent, cached)"
+          },
+          "recipient_phone": {
+            "type": "string",
+            "title": "Recipient Phone",
+            "description": "Masked or unmasked recipient phone number"
+          },
+          "message_body": {
+            "type": "string",
+            "title": "Message Body",
+            "description": "Final message body dispatched to the recipient"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delivery_status",
+          "recipient_phone",
+          "message_body"
+        ],
+        "title": "NotifyAlertResponse",
+        "description": "Schema for the response of an alert notification dispatch attempt."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
