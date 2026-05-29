@@ -26,6 +26,124 @@
         }
       }
     },
+    "/api/v1/patients": {
+      "get": {
+        "tags": [
+          "Patients Directory"
+        ],
+        "summary": "List Patients",
+        "description": "Retrieves a list of all enrolled patients.",
+        "operationId": "list_patients_api_v1_patients_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PatientListResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}": {
+      "get": {
+        "tags": [
+          "Patients Directory"
+        ],
+        "summary": "Get Patient Detail",
+        "description": "Retrieves detailed demographic and clinical status for a specific patient.",
+        "operationId": "get_patient_detail_api_v1_patients__patient_id__get",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PatientDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{patient_id}/hb-reading": {
+      "post": {
+        "tags": [
+          "Patients Directory"
+        ],
+        "summary": "Log Hb Reading",
+        "description": "Logs a new clinical hemoglobin reading for a patient.\n\nIf the reading is marked as post-transfusion and units are provided, this calculates\nthe incremental Hb rise per unit based on the most recent pre-transfusion reading.\nUpon successful log, updates the patient's current Hb status and invalidates \ncached clinical forecasts in Redis.",
+        "operationId": "log_hb_reading_api_v1_patients__patient_id__hb_reading_post",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HbReadingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_HbReadingResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/patients/{patient_id}/forecast": {
       "get": {
         "tags": [
@@ -606,6 +724,39 @@
         ],
         "title": "ApiResponse[GuardianCircleResponse]"
       },
+      "ApiResponse_HbReadingResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HbReadingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[HbReadingResponse]"
+      },
       "ApiResponse_MobilizationStatusResponse_": {
         "properties": {
           "success": {
@@ -671,6 +822,72 @@
           "success"
         ],
         "title": "ApiResponse[NotifyAlertResponse]"
+      },
+      "ApiResponse_PatientDetail_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[PatientDetail]"
+      },
+      "ApiResponse_PatientListResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientListResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ApiResponse[PatientListResponse]"
       },
       "ApiResponse_str_": {
         "properties": {
@@ -839,43 +1056,59 @@
       },
       "CityInventoryResponse": {
         "properties": {
-          "banks": {
+          "city_code": {
+            "type": "string",
+            "title": "City Code"
+          },
+          "city_health_score": {
+            "type": "number",
+            "title": "City Health Score"
+          },
+          "health_status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red"
+            ],
+            "title": "Health Status"
+          },
+          "last_optimized_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Optimized At"
+          },
+          "blood_banks": {
             "items": {
               "$ref": "#/components/schemas/BloodBankNodeSchema"
             },
             "type": "array",
-            "title": "Banks"
+            "title": "Blood Banks"
           },
-          "matches": {
+          "active_matches": {
             "items": {
               "$ref": "#/components/schemas/InventoryMatchSchema"
             },
             "type": "array",
-            "title": "Matches"
+            "title": "Active Matches"
           },
-          "city_health_score": {
-            "type": "integer",
-            "title": "City Health Score"
-          },
-          "coverage_pct": {
-            "type": "number",
-            "title": "Coverage Pct"
-          },
-          "inventory_summary": {
+          "coverage_by_type": {
             "additionalProperties": {
-              "type": "integer"
+              "$ref": "#/components/schemas/TypeCoverageSchema"
             },
             "type": "object",
-            "title": "Inventory Summary"
+            "title": "Coverage By Type"
           }
         },
         "type": "object",
         "required": [
-          "banks",
-          "matches",
+          "city_code",
           "city_health_score",
-          "coverage_pct",
-          "inventory_summary"
+          "health_status",
+          "last_optimized_at",
+          "blood_banks",
+          "active_matches",
+          "coverage_by_type"
         ],
         "title": "CityInventoryResponse",
         "description": "Schema representing the optimization summary and mappings for a city."
@@ -997,6 +1230,10 @@
       },
       "GuardianCircleResponse": {
         "properties": {
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
           "coverage_score": {
             "type": "number",
             "maximum": 100.0,
@@ -1020,7 +1257,14 @@
             "title": "Mobilization Status"
           },
           "days_to_transfusion": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Days To Transfusion"
           },
           "guardians": {
@@ -1033,11 +1277,11 @@
         },
         "type": "object",
         "required": [
+          "patient_id",
           "coverage_score",
           "engagement_score",
           "resilience_score",
           "mobilization_status",
-          "days_to_transfusion",
           "guardians"
         ],
         "title": "GuardianCircleResponse",
@@ -1063,10 +1307,22 @@
           },
           "role": {
             "type": "string",
+            "enum": [
+              "primary",
+              "secondary",
+              "rare_specialist"
+            ],
             "title": "Role"
           },
           "status": {
             "type": "string",
+            "enum": [
+              "active",
+              "cooldown",
+              "pending",
+              "unavailable",
+              "empty"
+            ],
             "title": "Status"
           },
           "last_donation_date": {
@@ -1132,7 +1388,7 @@
           "geography_score"
         ],
         "title": "GuardianSchema",
-        "description": "Strict schema representing a circle member or rare specialist candidate.\nEnforces privacy by masking phone numbers at the serialization boundary."
+        "description": "Strict schema representing a circle member or rare specialist candidate.\nEnforces privacy by masking phone numbers as phone_last4 at the serialization boundary."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1146,6 +1402,101 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HbReadingCreate": {
+        "properties": {
+          "hb_value": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Hb Value"
+          },
+          "reading_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Reading Date"
+          },
+          "post_transfusion": {
+            "type": "boolean",
+            "title": "Post Transfusion"
+          },
+          "units_transfused": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units Transfused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hb_value",
+          "reading_date",
+          "post_transfusion"
+        ],
+        "title": "HbReadingCreate",
+        "description": "Input schema for logging new hemoglobin check readings."
+      },
+      "HbReadingResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "hb_value": {
+            "type": "number",
+            "title": "Hb Value"
+          },
+          "reading_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Reading Date"
+          },
+          "post_transfusion": {
+            "type": "boolean",
+            "title": "Post Transfusion"
+          },
+          "units_transfused": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units Transfused"
+          },
+          "hb_rise_per_unit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hb Rise Per Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "hb_value",
+          "reading_date",
+          "post_transfusion"
+        ],
+        "title": "HbReadingResponse",
+        "description": "Response schema for a successfully logged Hb reading record."
       },
       "HbReadingSchema": {
         "properties": {
@@ -1261,6 +1612,10 @@
       },
       "InventoryMatchSchema": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "patient_id": {
             "type": "string",
             "title": "Patient Id"
@@ -1277,43 +1632,70 @@
             "type": "string",
             "title": "Bank Name"
           },
-          "unit_id": {
+          "blood_group": {
             "type": "string",
-            "title": "Unit Id"
+            "title": "Blood Group"
           },
-          "blood_type": {
-            "type": "string",
-            "title": "Blood Type"
+          "extended_phenotype_match": {
+            "type": "boolean",
+            "title": "Extended Phenotype Match"
           },
-          "rh_factor": {
-            "type": "string",
-            "title": "Rh Factor"
+          "units_available": {
+            "type": "integer",
+            "title": "Units Available"
           },
           "expiry_date": {
             "type": "string",
-            "format": "date-time",
+            "format": "date",
             "title": "Expiry Date"
+          },
+          "days_until_expiry": {
+            "type": "integer",
+            "title": "Days Until Expiry"
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "routine",
+              "urgent",
+              "critical"
+            ],
+            "title": "Urgency"
           },
           "distance_km": {
             "type": "number",
             "title": "Distance Km"
           },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          },
           "status": {
             "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "completed"
+            ],
             "title": "Status"
           }
         },
         "type": "object",
         "required": [
+          "id",
           "patient_id",
           "patient_name",
           "bank_id",
           "bank_name",
-          "unit_id",
-          "blood_type",
-          "rh_factor",
+          "blood_group",
+          "extended_phenotype_match",
+          "units_available",
           "expiry_date",
+          "days_until_expiry",
+          "urgency",
           "distance_km",
+          "recommended_action",
           "status"
         ],
         "title": "InventoryMatchSchema",
@@ -1374,6 +1756,236 @@
         ],
         "title": "NotifyAlertResponse",
         "description": "Schema for the response of an alert notification dispatch attempt."
+      },
+      "PatientDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "blood_type": {
+            "type": "string",
+            "title": "Blood Type"
+          },
+          "rh_factor": {
+            "type": "string",
+            "title": "Rh Factor"
+          },
+          "kell_negative": {
+            "type": "boolean",
+            "title": "Kell Negative"
+          },
+          "duffy_negative": {
+            "type": "boolean",
+            "title": "Duffy Negative"
+          },
+          "kidd_negative": {
+            "type": "boolean",
+            "title": "Kidd Negative"
+          },
+          "alloimmunization_flag": {
+            "type": "boolean",
+            "title": "Alloimmunization Flag"
+          },
+          "hospital_id": {
+            "type": "string",
+            "title": "Hospital Id"
+          },
+          "enrolled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Enrolled At"
+          },
+          "next_transfusion_predicted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Transfusion Predicted"
+          },
+          "hb_current": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hb Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "age",
+          "blood_type",
+          "rh_factor",
+          "kell_negative",
+          "duffy_negative",
+          "kidd_negative",
+          "alloimmunization_flag",
+          "hospital_id",
+          "enrolled_at"
+        ],
+        "title": "PatientDetail",
+        "description": "Detailed patient schema including base fields."
+      },
+      "PatientListResponse": {
+        "properties": {
+          "patients": {
+            "items": {
+              "$ref": "#/components/schemas/PatientSchema"
+            },
+            "type": "array",
+            "title": "Patients"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patients",
+          "total",
+          "page"
+        ],
+        "title": "PatientListResponse",
+        "description": "Envelope for patient directory list responses."
+      },
+      "PatientSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "blood_type": {
+            "type": "string",
+            "title": "Blood Type"
+          },
+          "rh_factor": {
+            "type": "string",
+            "title": "Rh Factor"
+          },
+          "kell_negative": {
+            "type": "boolean",
+            "title": "Kell Negative"
+          },
+          "duffy_negative": {
+            "type": "boolean",
+            "title": "Duffy Negative"
+          },
+          "kidd_negative": {
+            "type": "boolean",
+            "title": "Kidd Negative"
+          },
+          "alloimmunization_flag": {
+            "type": "boolean",
+            "title": "Alloimmunization Flag"
+          },
+          "hospital_id": {
+            "type": "string",
+            "title": "Hospital Id"
+          },
+          "enrolled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Enrolled At"
+          },
+          "next_transfusion_predicted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Transfusion Predicted"
+          },
+          "hb_current": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hb Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "age",
+          "blood_type",
+          "rh_factor",
+          "kell_negative",
+          "duffy_negative",
+          "kidd_negative",
+          "alloimmunization_flag",
+          "hospital_id",
+          "enrolled_at"
+        ],
+        "title": "PatientSchema",
+        "description": "Schema representing core patient details in the RaktaSetu ecosystem."
+      },
+      "TypeCoverageSchema": {
+        "properties": {
+          "units_available": {
+            "type": "integer",
+            "title": "Units Available"
+          },
+          "days_covered": {
+            "type": "number",
+            "title": "Days Covered"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "units_available",
+          "days_covered",
+          "status"
+        ],
+        "title": "TypeCoverageSchema",
+        "description": "Schema tracking coverage performance metrics for specific blood groups."
       },
       "ValidationError": {
         "properties": {
