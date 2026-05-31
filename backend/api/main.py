@@ -15,10 +15,13 @@ async def lifespan(app: FastAPI):
     Enables initialization of connection pools and external APIs.
     """
     logger.info("application_startup_initiated", environment=settings.app_env)
-    from workers.scheduler import start_scheduler, stop_scheduler
-    start_scheduler()
+    if settings.app_env != "test":
+        from workers.scheduler import start_scheduler
+        start_scheduler()
     yield
-    stop_scheduler()
+    if settings.app_env != "test":
+        from workers.scheduler import stop_scheduler
+        stop_scheduler()
     logger.info("application_shutdown_initiated")
 
 # Instantiate core FastAPI application
