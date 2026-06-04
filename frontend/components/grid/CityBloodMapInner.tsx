@@ -127,16 +127,6 @@ function MapInstanceTracker({ mapRef }: { mapRef: React.MutableRefObject<L.Map |
   const map = useMap();
   React.useEffect(() => {
     mapRef.current = map;
-    return () => {
-      if (mapRef.current) {
-        try {
-          mapRef.current.remove();
-        } catch (e) {
-          console.warn("[Leaflet Map Clean Up Warn]:", e);
-        }
-        mapRef.current = null;
-      }
-    };
   }, [map, mapRef]);
   return null;
 }
@@ -149,9 +139,40 @@ export function CityBloodMapInner({
 }: CityBloodMapInnerProps) {
   const hyderabadCenter: [number, number] = [17.385, 78.4867];
   const mapRef = React.useRef<L.Map | null>(null);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const cleanStaleLeafletIds = () => {
+      if (wrapperRef.current) {
+        const leafletContainers = wrapperRef.current.getElementsByClassName("leaflet-container");
+        for (let i = 0; i < leafletContainers.length; i++) {
+          const el = leafletContainers[i] as any;
+          if (el && el._leaflet_id) {
+            delete el._leaflet_id;
+          }
+        }
+      }
+    };
+
+    // Clean up on mount (handles React 18/19 Strict Mode double mount reuse)
+    cleanStaleLeafletIds();
+
+    return () => {
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+        } catch (e) {
+          console.warn("[Leaflet Map Clean Up Warn]:", e);
+        }
+        mapRef.current = null;
+      }
+      cleanStaleLeafletIds();
+    };
+  }, []);
 
   return (
     <div
+      ref={wrapperRef}
       className="w-full h-full relative rounded-xl overflow-hidden select-none"
       style={{ border: "1px solid var(--bg-border)", background: "var(--bg-void)" }}
     >

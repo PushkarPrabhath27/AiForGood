@@ -31,12 +31,32 @@ export interface HbForecastChartProps {
 
 type Timeframe = "3M" | "6M" | "ALL";
 
+function useContainerWidth(elementRef: React.RefObject<HTMLDivElement | null>) {
+  const [width, setWidth] = React.useState(600);
+
+  React.useEffect(() => {
+    if (!elementRef.current) return;
+    setWidth(elementRef.current.getBoundingClientRect().width);
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0] && entries[0].contentRect) {
+        setWidth(entries[0].contentRect.width);
+      }
+    });
+    observer.observe(elementRef.current);
+    return () => observer.disconnect();
+  }, [elementRef]);
+
+  return width;
+}
+
 export function HbForecastChart({
   historical,
   forecast,
   threshold = 7.0,
   predictedDate = "2024-11-03",
 }: HbForecastChartProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const chartWidth = useContainerWidth(containerRef);
   const [timeframe, setTimeframe] = React.useState<Timeframe>("3M");
   const [selectedPoint, setSelectedPoint] = React.useState<{
     date: string;
@@ -221,7 +241,7 @@ export function HbForecastChart({
       </div>
 
       {/* Chart */}
-      <div className="relative z-10">
+      <div ref={containerRef} className="relative z-10 w-full">
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes dash-drift { to { stroke-dashoffset: -20; } }
           .dashed-forecast { animation: dash-drift 1.5s linear infinite; }
@@ -236,12 +256,13 @@ export function HbForecastChart({
             transition={{ duration: 0.2 }}
             className="w-full h-[300px]"
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={chartData}
-                onClick={handleChartClick}
-                margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
-              >
+            <ComposedChart
+              width={Math.max(100, chartWidth)}
+              height={300}
+              data={chartData}
+              onClick={handleChartClick}
+              margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
+            >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" opacity={0.6} />
 
                 <XAxis
@@ -435,7 +456,6 @@ export function HbForecastChart({
                   />
                 )}
               </ComposedChart>
-            </ResponsiveContainer>
           </motion.div>
         </AnimatePresence>
 
