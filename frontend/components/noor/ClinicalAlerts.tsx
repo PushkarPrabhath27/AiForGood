@@ -147,6 +147,69 @@ export function ClinicalAlerts({ alerts }: ClinicalAlertsProps) {
                   </div>
                 </div>
 
+                {/* Visual Data representations injected based on type */}
+                {selectedType === "iron_overload" && (
+                  <div className="space-y-2 mb-4">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 block font-mono">
+                      Ferritin Trend Analysis
+                    </span>
+                    <div className="bg-bg-primary/60 p-4 rounded-md border border-bg-hover flex items-center gap-6">
+                      <div className="flex-1">
+                        <svg viewBox="0 0 100 30" className="w-full h-8 overflow-visible">
+                          <polyline
+                            fill="none"
+                            stroke="var(--accent-amber)"
+                            strokeWidth="2"
+                            points="0,25 20,23 40,20 60,15 80,8 100,2"
+                            style={{ filter: "drop-shadow(0 0 4px rgba(244,162,97,0.5))" }}
+                          />
+                          <circle cx="100" cy="2" r="3" fill="var(--accent-amber)" />
+                        </svg>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-xl font-bold font-mono text-accent-amber block leading-none" style={{ textShadow: "0 0 10px rgba(244,162,97,0.4)" }}>
+                          2,340
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                          ng/mL — Trending Up
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedType === "alloimmunization" && (
+                  <div className="space-y-2 mb-4">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 block font-mono">
+                      Hb-Rise-Per-Unit Trend
+                    </span>
+                    <div className="bg-bg-primary/60 p-4 rounded-md border border-bg-hover flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-mono text-sm font-bold">
+                        <span className="text-slate-400">2.1</span>
+                        <span className="text-slate-500">→</span>
+                        <span className="text-slate-400">1.8</span>
+                        <span className="text-slate-500">→</span>
+                        <span className="text-accent-orange">1.4</span>
+                        <span className="text-slate-500">→</span>
+                        <span className="text-accent-crimson flex items-center gap-1" style={{ textShadow: "0 0 10px rgba(230,57,70,0.5)" }}>
+                          0.9 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+                          CUSUM Score
+                        </span>
+                        <div className="w-24 h-2 rounded-full bg-bg-elevated overflow-hidden border border-bg-border">
+                          <div className="h-full bg-accent-crimson w-[85%]" style={{ boxShadow: "0 0 8px rgba(230,57,70,0.8)" }} />
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-accent-crimson mt-1 animate-pulse">
+                          CRITICAL
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 block font-mono">
                     Recommended Action Strategy

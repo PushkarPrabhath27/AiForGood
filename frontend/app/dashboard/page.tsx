@@ -2,18 +2,17 @@
 
 import * as React from "react";
 import { usePatients } from "@/lib/hooks/usePatients";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { AlertBanner } from "@/components/shared/AlertBanner";
-import { StatusPill } from "@/components/shared/StatusPill";
 import { formatDate } from "@/lib/utils/dates";
 import { formatHb } from "@/lib/utils/format";
-import { Users, Calendar, ArrowRight, ShieldAlert, Heart, Search, Cpu } from "lucide-react";
+import {
+  Users, Calendar, ArrowRight, ShieldAlert, Heart,
+  Activity, AlertTriangle, CheckCircle, Network
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils/cn";
 import type { Patient } from "@/../shared/contracts/api.types";
 
 export default function DashboardOverviewPage() {
@@ -22,21 +21,28 @@ export default function DashboardOverviewPage() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("search") || "";
 
-  // Dynamic matched text highlight helper using aether styling
   const highlightText = (text: string, search: string) => {
     if (!search.trim()) return <span>{text}</span>;
-    const regex = new RegExp(`(${search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, "gi");
+    const regex = new RegExp(`(${search.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")})`, "gi");
     const parts = text.split(regex);
     return (
       <span>
         {parts.map((part, i) =>
           regex.test(part) ? (
-            <span key={i} className="bg-pulse-cyan/25 text-pulse-cyan px-1 py-0.5 rounded font-extrabold font-mono">
+            <span
+              key={i}
+              style={{
+                background: "rgba(0, 180, 216, 0.2)",
+                color: "var(--accent-cyan)",
+                padding: "0 2px",
+                borderRadius: 3,
+                fontFamily: "var(--font-jetbrains-mono)",
+                fontWeight: 800,
+              }}
+            >
               {part}
             </span>
-          ) : (
-            part
-          )
+          ) : part
         )}
       </span>
     );
@@ -45,7 +51,11 @@ export default function DashboardOverviewPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 bg-aether-slate rounded-lg animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "var(--bg-surface)" }} />
+          ))}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <LoadingSkeleton variant="card" />
           <LoadingSkeleton variant="card" />
@@ -60,8 +70,6 @@ export default function DashboardOverviewPage() {
   }
 
   const patients = response.data.patients;
-
-  // Filter patient cards list in real-time
   const filteredPatients = patients.filter((patient) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -73,142 +81,271 @@ export default function DashboardOverviewPage() {
     );
   });
 
+  const statBar = [
+    { label: "PATIENTS MONITORED", value: patients.length, icon: <Users className="w-5 h-5" />, color: "var(--accent-cyan)" },
+    { label: "TRANSFUSIONS THIS MONTH", value: "4", icon: <Activity className="w-5 h-5" />, color: "var(--accent-emerald)" },
+    { label: "ACTIVE ALERTS", value: patients.filter((p) => p.alloimmunization_flag).length, icon: <AlertTriangle className="w-5 h-5" />, color: "var(--accent-crimson)" },
+    { label: "GUARDIANS CONFIRMED", value: "7/8", icon: <CheckCircle className="w-5 h-5" />, color: "var(--accent-amber)" },
+  ];
+
   return (
     <div className="space-y-8 relative">
-      {/* Drifting neural mesh background overlay */}
-      <div className="absolute inset-0 neural-mesh opacity-[0.01] pointer-events-none" />
-
-      {/* Demo Sandbox Alert Banner redesigned as aether glass */}
+      {/* Demo Sandbox Alert */}
       {showBanner && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-lg aether-glass border border-pulse-cyan/20 text-slate-300 flex items-center justify-between gap-4"
+          className="p-4 rounded-xl flex items-center justify-between gap-4"
+          style={{
+            background: "rgba(0, 180, 216, 0.04)",
+            border: "1px solid rgba(0, 180, 216, 0.15)",
+          }}
         >
           <div className="flex items-center gap-3">
-            <span className="text-xl animate-pulse">💡</span>
-            <div className="text-xs">
-              <h4 className="font-extrabold text-white font-space uppercase tracking-wider">Active Clinical Sandbox Demo</h4>
-              <p className="text-slate-400 font-medium mt-0.5 font-mono text-[10px]">
-                VIEWING MOCK CLINICAL COORDINATES MAPPED TO HYDERABAD DIRECTORY · PRIYA SHARMA & VIKRAM REDDY
+            <span className="w-2 h-2 rounded-full animate-pulse flex-shrink-0" style={{ background: "var(--accent-cyan)" }} />
+            <div>
+              <h4
+                className="text-[10px] font-bold uppercase tracking-widest"
+                style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-primary)" }}
+              >
+                Active Clinical Sandbox — HYD Cluster
+              </h4>
+              <p
+                className="text-[9px] mt-0.5"
+                style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+              >
+                PRIYA SHARMA · VIKRAM REDDY · NILOUFER CHILDREN'S HOSPITAL
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowBanner(false)}
-            className="text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-pulse-cyan px-2.5 py-1 transition-all font-mono"
+            className="text-[9px] font-bold uppercase tracking-widest transition-colors"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-dim)", cursor: "pointer" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--accent-cyan)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)"; }}
           >
             Dismiss
           </button>
         </motion.div>
       )}
 
-      {/* Overview Header in Space Grotesk */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+      {/* Stat Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {statBar.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08, duration: 0.3 }}
+            className="p-4 rounded-xl relative overflow-hidden"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--bg-border)" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span style={{ color: s.color, opacity: 0.8 }}>{s.icon}</span>
+              <span
+                className="text-2xl font-bold"
+                style={{ fontFamily: "var(--font-jetbrains-mono)", color: s.color }}
+              >
+                {s.value}
+              </span>
+            </div>
+            <span
+              className="text-[8px] font-bold uppercase tracking-widest"
+              style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+            >
+              {s.label}
+            </span>
+            <div
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ background: s.color, opacity: 0.5 }}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2 font-space uppercase">
-            <Users className="w-8 h-8 text-pulse-cyan" />
-            Active Patients
+          <h1
+            className="text-2xl font-bold tracking-tight uppercase flex items-center gap-2"
+            style={{ fontFamily: "var(--font-space-grotesk)", color: "var(--text-primary)" }}
+          >
+            <Users className="w-6 h-6" style={{ color: "var(--accent-cyan)" }} />
+            Patient Registry
           </h1>
-          <p className="text-[10px] text-pulse-cyan mt-1 font-bold font-mono tracking-widest uppercase">
-            2 MONITORED • HYDERABAD CLUSTER • NILOUFER CHILDREN'S HOSPITAL
+          <p
+            className="text-[9px] mt-1 font-bold uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--accent-cyan)" }}
+          >
+            2 MONITORED · HYDERABAD CLUSTER · NILOUFER CHILDREN'S HOSPITAL
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[10px] aether-glass border border-pulse-cyan/15 px-3.5 py-1.5 rounded-md text-pulse-emerald font-semibold shadow-lg font-mono uppercase tracking-wider">
-          <span className="w-2 h-2 rounded-full bg-pulse-emerald animate-pulse" />
-          Clinical database synced
+        <div
+          className="flex items-center gap-2 text-[9px] font-bold px-3 py-1.5 rounded-md"
+          style={{
+            background: "rgba(82, 183, 136, 0.06)",
+            border: "1px solid rgba(82, 183, 136, 0.2)",
+            color: "var(--accent-emerald)",
+            fontFamily: "var(--font-jetbrains-mono)",
+          }}
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent-emerald)" }} />
+          LIVE DATABASE SYNC
         </div>
       </div>
 
-      {/* Real-time search query display status */}
       {searchQuery && (
-        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-          Showing results for query: <span className="font-mono text-pulse-cyan bg-aether-slate border border-pulse-cyan/10 px-2 py-0.5 rounded">"{searchQuery}"</span>
+        <div
+          className="text-[9px] font-bold uppercase tracking-wider"
+          style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+        >
+          Results for:{" "}
+          <span
+            className="px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(0, 180, 216, 0.1)", color: "var(--accent-cyan)", border: "1px solid rgba(0,180,216,0.2)" }}
+          >
+            "{searchQuery}"
+          </span>
         </div>
       )}
 
-      {/* Patient Grid / Empty State fallback */}
+      {/* Patient Grid */}
       {filteredPatients.length === 0 ? (
-        <Card className="aether-glass border border-pulse-cyan/15 rounded-xl p-12 flex flex-col items-center justify-center text-center gap-4 border-dashed relative overflow-hidden">
-          <div className="w-12 h-12 rounded-full bg-aether-void flex items-center justify-center text-slate-500 border border-aether-ink">
-            <Search className="w-5 h-5 text-pulse-cyan animate-pulse" />
+        <div
+          className="p-12 rounded-xl flex flex-col items-center justify-center text-center gap-4"
+          style={{ border: "1px dashed var(--bg-border)", background: "var(--bg-surface)" }}
+        >
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--bg-border)" }}
+          >
+            <Network className="w-5 h-5" style={{ color: "var(--accent-cyan)" }} />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-white font-bold font-space uppercase text-sm">No Patients Found</h3>
-            <p className="text-slate-400 text-xs font-mono max-w-[280px] leading-relaxed uppercase text-[9px] tracking-wider">
-              No matching records discovered in local clinical directory for search criteria.
+          <div>
+            <h3
+              className="font-bold text-sm uppercase"
+              style={{ fontFamily: "var(--font-space-grotesk)", color: "var(--text-primary)" }}
+            >
+              No Patients Found
+            </h3>
+            <p
+              className="text-[9px] mt-1 max-w-[280px] leading-relaxed"
+              style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+            >
+              No matching clinical records for the current search criteria.
             </p>
           </div>
-        </Card>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-          {filteredPatients.map((patient) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredPatients.map((patient, index) => {
             const bloodGroupStr = `${patient.blood_type}${patient.rh_factor}`;
             const isPriya = patient.name.includes("Priya");
-            const daysLeft = isPriya ? 14 : 18; // relative to Oct 20 today
-            
-            // Dynamic color/status resolver based on Hb value
+            const daysLeft = isPriya ? 14 : 18;
             const hb = patient.hb_current ?? 0;
-            let statusLabel = "STABLE";
-            let statusBadgeClass = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-            let hbColorClass = "text-emerald-450";
-            let leftBorderClass = "border-l-4 border-l-status-green";
 
-            if (hb < 7.0) {
-              statusLabel = "CRITICAL";
-              statusBadgeClass = "bg-rose-500/20 text-rose-450 border-rose-500/30";
-              hbColorClass = "text-rose-450";
-              leftBorderClass = "border-l-4 border-l-status-red";
-            } else if (hb < 8.0) {
-              statusLabel = "WARNING";
-              statusBadgeClass = "bg-amber-500/20 text-amber-450 border-amber-500/30";
-              hbColorClass = "text-amber-400";
-              leftBorderClass = "border-l-4 border-l-status-amber";
-            }
+            const isCritical = hb < 7.0;
+            const isWarning = hb < 8.0 && hb >= 7.0;
+            const statusColor = isCritical ? "var(--accent-crimson)" : isWarning ? "var(--accent-amber)" : "var(--accent-emerald)";
+            const statusLabel = isCritical ? "CRITICAL" : isWarning ? "WARNING" : "STABLE";
+            const daysColor = daysLeft <= 7 ? "var(--accent-crimson)" : daysLeft <= 14 ? "var(--accent-amber)" : "var(--accent-emerald)";
 
             return (
-              <Card
+              <motion.div
                 key={patient.id}
-                className={cn(
-                  "bg-gradient-to-b from-bg-secondary to-bg-tertiary aether-glass rounded-xl overflow-hidden shadow-2xl flex flex-col group transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:border-accent-blue/30 border border-bg-hover",
-                  leftBorderClass
-                )}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.35, ease: "easeOut" }}
+                className="group relative rounded-xl overflow-hidden flex flex-col transition-all duration-300"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--bg-border)",
+                  borderLeft: `4px solid ${statusColor}`,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 30px rgba(230, 57, 70, 0.08)`;
+                  (e.currentTarget as HTMLDivElement).style.borderColor = `${statusColor}60`;
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--bg-border)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                }}
               >
-                <CardHeader className="p-6 pb-4">
-                  <div className="flex justify-between items-start gap-4">
+                <div className="p-6 flex-1">
+                  {/* Card Header */}
+                  <div className="flex justify-between items-start gap-4 mb-4">
                     <div className="space-y-1">
-                      {/* Name in Space Grotesk and life-rose */}
-                      <h2 className="text-xl font-bold text-accent-pink tracking-tight font-space leading-snug">
+                      <h2
+                        className="text-xl font-bold tracking-tight uppercase leading-snug"
+                        style={{ fontFamily: "var(--font-space-grotesk)", color: "var(--accent-crimson)" }}
+                      >
                         {highlightText(patient.name, searchQuery)}
                       </h2>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono">
-                        Age: {patient.age} yrs · ID: <span className="font-mono text-slate-500">{highlightText(patient.id.slice(0, 8), searchQuery)}</span>
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-wider"
+                        style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+                      >
+                        Age: {patient.age} yrs · ID:{" "}
+                        <span style={{ color: "var(--text-dim)" }}>
+                          {highlightText(patient.id.slice(0, 8), searchQuery)}
+                        </span>
                       </p>
                     </div>
-                    {/* Hollow Blood group badge */}
-                    <Badge className="bg-bg-primary/80 border border-accent-cyan/35 text-accent-cyan font-bold font-mono px-2.5 py-0.5 rounded text-[10px] tracking-widest shadow-[0_0_8px_rgba(6,182,212,0.1)]">
-                      {bloodGroupStr}
-                    </Badge>
-                  </div>
-                </CardHeader>
 
-                <CardContent className="p-6 pt-0 flex-1 space-y-5">
-                  {/* Stats Ledger Row */}
-                  <div className="grid grid-cols-2 gap-4 bg-bg-primary/60 p-4 rounded-md border border-bg-hover">
+                    {/* Blood type badge */}
+                    <span
+                      className="px-2.5 py-1 rounded-md text-[10px] font-bold flex-shrink-0"
+                      style={{
+                        fontFamily: "var(--font-jetbrains-mono)",
+                        background: "rgba(0, 180, 216, 0.08)",
+                        border: "1px solid rgba(0, 180, 216, 0.3)",
+                        color: "var(--accent-cyan)",
+                      }}
+                    >
+                      {bloodGroupStr}
+                    </span>
+                  </div>
+
+                  {/* Stats block */}
+                  <div
+                    className="grid grid-cols-2 gap-4 p-4 rounded-lg mb-4"
+                    style={{ background: "var(--bg-void)", border: "1px solid var(--bg-border)" }}
+                  >
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-slate-500 block mb-1 font-mono tracking-wider">
-                        Hemoglobin (Current)
+                      <span
+                        className="text-[8px] font-bold uppercase tracking-wider block mb-1"
+                        style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-dim)" }}
+                      >
+                        Current Hb
                       </span>
-                      <span className={cn("text-4xl font-bold font-mono tabular-nums leading-none", hbColorClass)}>
-                        {formatHb(hb)} <span className="text-[9px] text-slate-500 font-normal lowercase tracking-normal">g/dL</span>
+                      <span
+                        className="text-3xl font-bold tabular-nums leading-none"
+                        style={{ fontFamily: "var(--font-jetbrains-mono)", color: statusColor }}
+                      >
+                        {formatHb(hb)}{" "}
+                        <span
+                          className="text-[9px] font-normal"
+                          style={{ color: "var(--text-dim)" }}
+                        >
+                          g/dL
+                        </span>
                       </span>
                     </div>
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-slate-500 block mb-1 font-mono tracking-wider">
-                        Biometric Prediction
+                      <span
+                        className="text-[8px] font-bold uppercase tracking-wider block mb-1"
+                        style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-dim)" }}
+                      >
+                        Predicted
                       </span>
-                      <span className="text-sm font-bold text-white flex items-center gap-1.5 font-mono leading-none pt-2.5">
-                        <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
+                      <span
+                        className="text-sm font-bold flex items-center gap-1.5 leading-none pt-2"
+                        style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-primary)" }}
+                      >
+                        <Calendar className="w-3.5 h-3.5" style={{ color: "var(--accent-cyan)" }} />
                         {patient.next_transfusion_predicted
                           ? formatDate(patient.next_transfusion_predicted, "MMM dd").toUpperCase()
                           : "N/A"}
@@ -216,42 +353,98 @@ export default function DashboardOverviewPage() {
                     </div>
                   </div>
 
-                  {/* Alarm diagnostics / alert tags (Hollowed-out, thin borders) */}
+                  {/* Tags */}
                   <div className="flex flex-wrap gap-2 items-center">
-                    {/* Dynamic Status Badge Pill */}
-                    <Badge className={cn("font-bold font-mono text-[9px] uppercase tracking-wider rounded py-0.5 px-2 border", statusBadgeClass)}>
+                    <span
+                      className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                      style={{
+                        fontFamily: "var(--font-jetbrains-mono)",
+                        background: isCritical
+                          ? "rgba(230, 57, 70, 0.1)"
+                          : isWarning
+                          ? "rgba(244, 162, 97, 0.1)"
+                          : "rgba(82, 183, 136, 0.1)",
+                        border: `1px solid ${statusColor}50`,
+                        color: statusColor,
+                      }}
+                    >
                       STATUS: {statusLabel}
-                    </Badge>
+                    </span>
 
                     {patient.alloimmunization_flag ? (
-                      <Badge className="bg-bg-primary/60 text-accent-amber border border-accent-amber/35 font-bold font-mono text-[9px] uppercase tracking-wider rounded py-0.5 px-2 flex items-center gap-1">
-                        <ShieldAlert className="w-3.5 h-3.5 text-accent-amber animate-pulse" />
-                        SEQUENTIAL CUSUM: WARNING
-                      </Badge>
+                      <span
+                        className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider flex items-center gap-1"
+                        style={{
+                          fontFamily: "var(--font-jetbrains-mono)",
+                          background: "rgba(244, 162, 97, 0.08)",
+                          border: "1px solid rgba(244, 162, 97, 0.3)",
+                          color: "var(--accent-amber)",
+                        }}
+                      >
+                        <ShieldAlert className="w-3 h-3 animate-pulse" />
+                        CUSUM ALLOIMMUNIZATION
+                      </span>
                     ) : (
-                      <Badge className="bg-bg-primary/60 text-accent-cyan border border-accent-cyan/35 font-bold font-mono text-[9px] uppercase tracking-wider rounded py-0.5 px-2 flex items-center gap-1">
-                        <Heart className="w-3.5 h-3.5 text-accent-cyan fill-accent-cyan/10" />
-                        DECAY TRAJECTORY: STABLE
-                      </Badge>
+                      <span
+                        className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider flex items-center gap-1"
+                        style={{
+                          fontFamily: "var(--font-jetbrains-mono)",
+                          background: "rgba(0, 180, 216, 0.06)",
+                          border: "1px solid rgba(0, 180, 216, 0.25)",
+                          color: "var(--accent-cyan)",
+                        }}
+                      >
+                        <Heart className="w-3 h-3" />
+                        DECAY STABLE
+                      </span>
                     )}
-                    <Badge className="bg-bg-primary/60 text-accent-rose border border-accent-rose/35 font-bold font-mono text-[9px] uppercase tracking-wider rounded py-0.5 px-2">
-                      T-{daysLeft} DAYS TARGET
-                    </Badge>
-                  </div>
-                </CardContent>
 
-                {/* Rethemed "ACCESS NEURAL PROFILE" trigger with gradient border and hover background */}
-                <CardFooter className="p-6 pt-0 border-t border-bg-hover flex justify-end h-14 bg-bg-primary/20">
+                    <span
+                      className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                      style={{
+                        fontFamily: "var(--font-jetbrains-mono)",
+                        background: `${daysColor}10`,
+                        border: `1px solid ${daysColor}50`,
+                        color: daysColor,
+                      }}
+                    >
+                      T-{daysLeft} DAYS
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer CTA */}
+                <div
+                  className="px-6 py-3 flex justify-end border-t"
+                  style={{
+                    background: "rgba(0,0,0,0.2)",
+                    borderColor: "var(--bg-border)",
+                  }}
+                >
                   <Link
                     href={`/dashboard/patient/${patient.id}`}
-                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-accent-cyan hover:text-white px-3 py-1 bg-accent-cyan/5 hover:bg-gradient-to-r hover:from-accent-blue hover:to-accent-cyan rounded-md border border-accent-cyan/20 hover:border-transparent transition-all uppercase tracking-widest font-mono group"
+                    className="inline-flex items-center gap-1.5 text-[9px] font-bold px-3 py-1.5 rounded-md transition-all uppercase tracking-widest group/link"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono)",
+                      color: "var(--accent-cyan)",
+                      background: "rgba(0, 180, 216, 0.06)",
+                      border: "1px solid rgba(0, 180, 216, 0.2)",
+                    }}
                     aria-label={`View clinical details for ${patient.name}`}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0, 180, 216, 0.15)";
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(0, 180, 216, 0.5)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0, 180, 216, 0.06)";
+                      (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(0, 180, 216, 0.2)";
+                    }}
                   >
-                    ACCESS NEURAL PROFILE
-                    <ArrowRight className="w-4 h-4 text-accent-cyan group-hover:translate-x-1 group-hover:text-white transition-all filter drop-shadow-[0_0_2px_rgba(6,182,212,0.6)]" />
+                    ACCESS NOOR PROFILE
+                    <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-1 transition-transform" />
                   </Link>
-                </CardFooter>
-              </Card>
+                </div>
+              </motion.div>
             );
           })}
         </div>

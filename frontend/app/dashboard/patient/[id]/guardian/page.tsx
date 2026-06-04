@@ -88,18 +88,30 @@ export default function PatientGuardianPage({ params }: GuardianPageProps) {
           Back to Biometric Forecast
         </Link>
 
-        {/* View details tag */}
-        <span className="text-[9px] px-2.5 py-1 rounded-md bg-aether-void border border-pulse-cyan/35 text-pulse-cyan font-bold font-mono uppercase tracking-widest shadow-[0_0_8px_rgba(0,240,255,0.1)]">
-          RaktaMitra Network Active
+        {/* RaktaMitra chip */}
+        <span
+          className="text-[9px] px-2.5 py-1 rounded-md font-bold uppercase tracking-widest"
+          style={{
+            fontFamily: "var(--font-jetbrains-mono)",
+            background: "rgba(82, 183, 136, 0.08)",
+            border: "1px solid rgba(82, 183, 136, 0.3)",
+            color: "var(--accent-emerald)",
+          }}
+        >
+          ● RAKTAMITRA NETWORK ACTIVE
         </span>
       </div>
 
-      {/* Clinical Brain vs Guardian Constellation Segmented tab navigation */}
-      <div className="flex gap-8 pb-3 border-b border-aether-ink font-mono uppercase text-[10px] tracking-widest relative">
+      {/* Segmented tab navigation */}
+      <div
+        className="flex gap-8 pb-3 border-b relative"
+        style={{ borderColor: "var(--bg-border)" }}
+      >
         <div className="flex flex-col items-center relative">
           <Link
             href={`/dashboard/patient/${patient.id}`}
-            className="font-semibold text-slate-500 hover:text-slate-350 transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest transition-colors"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
           >
             Biometric Forecast
           </Link>
@@ -107,11 +119,15 @@ export default function PatientGuardianPage({ params }: GuardianPageProps) {
         <div className="flex flex-col items-center relative">
           <Link
             href={`/dashboard/patient/${patient.id}/guardian`}
-            className="font-bold text-pulse-cyan transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest transition-colors"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--accent-cyan)" }}
           >
             Guardian Network
           </Link>
-          <span className="w-1.5 h-1.5 rounded-full bg-pulse-cyan mt-1 shadow-[0_0_8px_rgba(0,240,255,0.8)] absolute -bottom-[15px] z-10" />
+          <span
+            className="w-1.5 h-1.5 rounded-full mt-1 absolute -bottom-[15px] z-10"
+            style={{ background: "var(--accent-cyan)", boxShadow: "0 0 8px rgba(0, 180, 216, 0.8)" }}
+          />
         </div>
       </div>
 

@@ -94,21 +94,29 @@ export default function PatientDetailPage({ params }: PatientPageProps) {
         <HbReadingForm patientId={patient.id} />
       </div>
 
-      {/* Clinical Brain vs Guardian Constellation Segmented tab navigation */}
-      <div className="flex gap-8 pb-3 border-b border-aether-ink font-mono uppercase text-[10px] tracking-widest relative">
+      {/* Segmented tab navigation */}
+      <div
+        className="flex gap-8 pb-3 border-b relative mb-6"
+        style={{ borderColor: "var(--bg-border)" }}
+      >
         <div className="flex flex-col items-center relative">
           <Link
             href={`/dashboard/patient/${patient.id}`}
-            className="font-bold text-pulse-cyan transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest transition-colors"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--accent-cyan)" }}
           >
             Biometric Forecast
           </Link>
-          <span className="w-1.5 h-1.5 rounded-full bg-pulse-cyan mt-1 shadow-[0_0_8px_rgba(0,240,255,0.8)] absolute -bottom-[15px] z-10" />
+          <span
+            className="w-1.5 h-1.5 rounded-full mt-1 absolute -bottom-[15px] z-10"
+            style={{ background: "var(--accent-cyan)", boxShadow: "0 0 8px rgba(0, 180, 216, 0.8)" }}
+          />
         </div>
         <div className="flex flex-col items-center relative">
           <Link
             href={`/dashboard/patient/${patient.id}/guardian`}
-            className="font-semibold text-slate-500 hover:text-slate-350 transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest transition-colors"
+            style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
           >
             Guardian Network
           </Link>

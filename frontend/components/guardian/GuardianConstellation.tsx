@@ -59,16 +59,15 @@ export function GuardianConstellation({
     prevSureshStatusRef.current = currentSureshStatus;
   }, [currentSureshStatus]);
 
-  // SVG trigonometry arrangement circle mapping responsive to window width
-  const [radius, setRadius] = React.useState(220);
+  const [scale, setScale] = React.useState(1);
 
   React.useEffect(() => {
     const handleResize = () => {
       if (typeof window !== "undefined") {
         if (window.innerWidth < 768) {
-          setRadius(140);
+          setScale(0.5);
         } else {
-          setRadius(220);
+          setScale(1);
         }
       }
     };
@@ -79,15 +78,32 @@ export function GuardianConstellation({
 
   const nodes = React.useMemo(() => {
     return guardians.map((g, index) => {
-      const angle = (index * 2 * Math.PI) / 8 - Math.PI / 2;
+      let r = 0;
+      let angle = 0;
+      
+      // 3 primary inner (indices 0,1,2), r=110 (scaled down to fit in 600x600 viewBox)
+      // 3 secondary middle (indices 3,4,5), r=180
+      // 2 rare outer (indices 6,7), r=250
+      
+      if (index < 3) {
+        r = 110 * scale;
+        angle = (index * 2 * Math.PI) / 3 - Math.PI / 2;
+      } else if (index < 6) {
+        r = 180 * scale;
+        angle = ((index - 3) * 2 * Math.PI) / 3 - Math.PI / 2 + Math.PI / 3; // offset by 60deg
+      } else {
+        r = 250 * scale;
+        angle = ((index - 6) * 2 * Math.PI) / 2;
+      }
+
       return {
         guardian: g,
-        x: 300 + radius * Math.cos(angle),
-        y: 300 + radius * Math.sin(angle),
+        x: 300 + r * Math.cos(angle),
+        y: 300 + r * Math.sin(angle),
         angle,
       };
     });
-  }, [guardians, radius]);
+  }, [guardians, scale]);
 
   // Find Suresh's specific coordinates for burst origin
   const sureshCoords = React.useMemo(() => {
