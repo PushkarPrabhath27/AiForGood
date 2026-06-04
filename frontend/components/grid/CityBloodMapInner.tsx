@@ -7,6 +7,15 @@ import type { BloodBankNode, HealthStatus } from "@/../shared/contracts/api.type
 
 import "leaflet/dist/leaflet.css";
 
+// Fix Leaflet default icon broken paths in Next.js
+// @ts-ignore
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "/leaflet/marker-icon.png",
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+});
+
 // CSS injection for high-fidelity holographic beacons in AETHER theme
 const mapStyles = `
   @keyframes pulse-ring {
@@ -97,14 +106,13 @@ const createBeaconIcon = (status: HealthStatus, hasMatch: boolean, isSelected: b
         <div style="position:absolute;inset:0;background:${
           activeCfg.bg
         };box-shadow:0 0 15px ${activeCfg.glow};display:flex;align-items:center;justify-content:center;${borderStyle} ${activeCfg.clip}">
-          <!-- Mini icon inside -->
-          <span style="font-size: 8px; color: #050508; font-weight: 900;">
-            ${status === "green" ? "HEX" : status === "yellow" ? "DIA" : "TRI"}
+          <span style="font-size: 9px; color: #050508; font-weight: 900; font-family: 'JetBrains Mono', monospace;">
+            ${status === "green" ? "B+" : status === "yellow" ? "B+" : "B+"}
           </span>
         </div>
-        <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:#0a0e1a;color:${
+        <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:#0a0a0f;color:${
           activeCfg.bg
-        };font-size:8px;font-family:var(--font-jetbrains-mono);font-weight:700;padding:1px 5px;border-radius:4px;border: 1px solid ${activeCfg.ring}40;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);">
+        };font-size:8px;font-family:monospace;font-weight:700;padding:1px 5px;border-radius:4px;border: 1px solid ${activeCfg.ring}40;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);">
           ${hasMatch ? "MATCH" : status === "yellow" ? "LOW" : status.toUpperCase()}
         </div>
       </div>
@@ -149,7 +157,10 @@ export function CityBloodMapInner({
   }, []);
 
   return (
-    <div className="w-full h-full relative rounded-xl overflow-hidden border border-aether-ink bg-aether-void select-none">
+    <div
+      className="w-full h-full relative rounded-xl overflow-hidden select-none"
+      style={{ border: "1px solid var(--bg-border)", background: "var(--bg-void)" }}
+    >
       <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
 
       <MapContainer

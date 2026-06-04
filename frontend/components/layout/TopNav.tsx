@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, Bell, Menu, User, Settings, LogOut, Activity, HardDrive, ShieldAlert, Cpu } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search, Bell, Menu, Activity, Cpu, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
@@ -19,59 +18,34 @@ export function TopNav({ onMenuClick }: TopNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Search input query state
   const [searchVal, setSearchVal] = React.useState(searchParams?.get("search") || "");
-
-  // Dropdown states
   const [showNotifications, setShowNotifications] = React.useState(false);
-  const [showUserDropdown, setShowUserDropdown] = React.useState(false);
 
-  // Notifications state
   const [notifications, setNotifications] = React.useState([
     { id: 1, text: "Suresh Kumar confirmed donation eligibility", type: "guardian", read: false },
     { id: 2, text: "Vikram Reddy's B+ unit match approved", type: "match", read: false },
-    { id: 3, text: "Apollo Blood Bank sync complete", type: "system", read: false },
   ]);
 
-  // Derived unread count
-  const unreadNotifications = React.useMemo(() => {
-    return notifications.filter((n) => !n.read).length;
-  }, [notifications]);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Debounced search query URL updates
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        if (searchVal) {
-          params.set("search", searchVal);
-        } else {
-          params.delete("search");
-        }
-
-        // Only redirect query param if on dashboard pages
-        if (pathname === "/dashboard" || pathname === "/") {
-          router.push(`${pathname}?${params.toString()}`);
-        }
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      if (searchVal) params.set("search", searchVal);
+      else params.delete("search");
+      if (pathname === "/dashboard" || pathname === "/") {
+        router.push(`${pathname}?${params.toString()}`);
       }
     }, 300);
-
     return () => clearTimeout(timer);
   }, [searchVal, pathname, router]);
 
-  const handleLogOut = () => {
-    localStorage.removeItem("raktasetu_session");
-    toast.success("Coordinator session logged out successfully.");
-    router.push("/login");
-  };
-
-  // Close dropdowns on outside clicks
   React.useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest(".relative-dropdown")) {
+      if (!target.closest(".notif-dropdown")) {
         setShowNotifications(false);
-        setShowUserDropdown(false);
       }
     };
     window.addEventListener("click", handleOutsideClick);
@@ -79,15 +53,25 @@ export function TopNav({ onMenuClick }: TopNavProps) {
   }, []);
 
   return (
-    <header className="h-16 border-b border-aether-ink bg-aether-void/40 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 w-full flex-shrink-0 relative z-30 select-none">
-      
+    <header
+      className="h-14 border-b flex items-center justify-between px-4 sm:px-5 w-full flex-shrink-0 relative z-30 select-none"
+      style={{
+        background: "rgba(10, 10, 15, 0.85)",
+        backdropFilter: "blur(16px)",
+        borderColor: "var(--bg-border)",
+      }}
+    >
       {/* Mobile Drawer Trigger */}
-      <div className="flex items-center gap-3 md:hidden relative z-40">
+      <div className="flex items-center gap-3 md:hidden">
         <Sheet>
-          <SheetTrigger className="text-slate-400 hover:text-pulse-cyan hover:bg-aether-slate/40 p-2 rounded-lg flex items-center justify-center cursor-pointer" aria-label="Open navigation menu">
+          <SheetTrigger
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            aria-label="Open navigation"
+          >
             <Menu className="w-5 h-5" />
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 bg-aether-void border-r border-aether-ink w-72">
+          <SheetContent side="left" className="p-0 w-64 border-r" style={{ background: "var(--bg-void)", borderColor: "var(--bg-border)" }}>
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation Menu</SheetTitle>
               <SheetDescription>Access clinical and inventory dashboards.</SheetDescription>
@@ -95,75 +79,179 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             <Sidebar className="!flex w-full border-r-0" />
           </SheetContent>
         </Sheet>
-        
-        {/* Brand Name on Mobile */}
-        <div className="flex items-center gap-1.5 font-space">
-          <span className="w-5 h-5 rounded bg-aether-slate border border-pulse-cyan/20 flex items-center justify-center text-xs font-black text-white">🩸</span>
-          <span className="font-bold text-sm text-white tracking-tight">RaktaSetu</span>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-bold" style={{ fontFamily: "var(--font-space-grotesk)", color: "var(--text-primary)" }}>
+            Rakta<span style={{ color: "var(--accent-crimson)" }}>Setu</span>
+          </span>
         </div>
       </div>
 
-      {/* Desktop Search Center - Rethemed as dark pill with cyan focus edge glow */}
-      <div className="hidden sm:flex items-center w-full max-w-xs relative z-40 relative-dropdown">
-        <Search className="w-4 h-4 text-slate-500 absolute left-3" aria-hidden="true" />
-        <Input
+      {/* LEFT: Breadcrumb (desktop) */}
+      <div className="hidden md:flex items-center gap-1.5 min-w-0 flex-1">
+        <span
+          className="text-[10px] font-bold tracking-widest uppercase truncate"
+          style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-dim)" }}
+        >
+          PATIENTS
+        </span>
+        <span style={{ color: "var(--text-dim)" }} className="text-[10px]">/ </span>
+        <span
+          className="text-[10px] font-bold tracking-widest uppercase truncate"
+          style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-secondary)" }}
+        >
+          Priya Sharma
+        </span>
+        <span style={{ color: "var(--text-dim)" }} className="text-[10px]">/ </span>
+        <span
+          className="text-[10px] font-bold tracking-widest uppercase"
+          style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--accent-cyan)" }}
+        >
+          NOOR ENGINE
+        </span>
+      </div>
+
+      {/* CENTER: Search Bar */}
+      <div className="flex items-center w-full max-w-sm relative mx-4">
+        <Search
+          className="w-3.5 h-3.5 absolute left-3 pointer-events-none"
+          style={{ color: "var(--text-dim)" }}
+          aria-hidden="true"
+        />
+        <input
           type="search"
           value={searchVal}
           onChange={(e) => setSearchVal(e.target.value)}
-          placeholder="Search patients by name or ID..."
+          placeholder="Search patients, alerts, banks..."
           aria-label="Search patients"
-          className="bg-aether-void/80 border border-aether-ink text-slate-100 placeholder-slate-500 pl-9 rounded-md focus:border-pulse-cyan focus-visible:ring-pulse-cyan/25 h-9 text-xs transition-all font-mono"
+          className="w-full h-8 pl-8 pr-16 rounded-md text-[11px] transition-all outline-none"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--bg-border)",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-jetbrains-mono)",
+          }}
+          onFocus={(e) => {
+            (e.target as HTMLInputElement).style.borderColor = "rgba(0, 180, 216, 0.4)";
+            (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(0, 180, 216, 0.08)";
+          }}
+          onBlur={(e) => {
+            (e.target as HTMLInputElement).style.borderColor = "var(--bg-border)";
+            (e.target as HTMLInputElement).style.boxShadow = "none";
+          }}
         />
+        {/* Cmd+K hint */}
+        <div className="absolute right-2 flex items-center gap-0.5 pointer-events-none">
+          <kbd
+            className="text-[8px] px-1 py-0.5 rounded"
+            style={{
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--bg-border)",
+              color: "var(--text-dim)",
+              fontFamily: "var(--font-jetbrains-mono)",
+            }}
+          >
+            ⌘K
+          </kbd>
+        </div>
       </div>
 
-      {/* Right-aligned Navigation Controls */}
-      <div className="flex items-center gap-2 sm:gap-4 ml-auto relative z-40">
-        
-        {/* Rethemed Pulsing AI badge */}
-        <div 
+      {/* RIGHT: Controls */}
+      <div className="flex items-center gap-2">
+
+        {/* HYD City Chip */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-bold"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--bg-border)",
+            color: "var(--text-secondary)",
+            fontFamily: "var(--font-jetbrains-mono)",
+            letterSpacing: "0.1em",
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: "var(--accent-violet)" }}
+          />
+          HYD
+        </div>
+
+        {/* NOOR Engine status chip */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[9px] font-bold cursor-help hover:scale-[1.02] transition-all"
+          style={{
+            background: "rgba(0, 180, 216, 0.06)",
+            border: "1px solid rgba(0, 180, 216, 0.2)",
+            color: "var(--accent-cyan)",
+            fontFamily: "var(--font-jetbrains-mono)",
+            letterSpacing: "0.08em",
+          }}
           title="NOOR Engine is monitoring 2 patients"
-          className="hidden sm:flex items-center gap-1.5 aether-glass border border-pulse-cyan/15 px-3.5 py-1.5 rounded-md text-[10px] font-bold text-pulse-cyan cursor-help hover:border-pulse-cyan/40 transition-all select-none hover:scale-[1.02] font-mono tracking-wider"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pulse-emerald opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-pulse-emerald"></span>
+            <span
+              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+              style={{ background: "var(--accent-emerald)" }}
+            />
+            <span
+              className="relative inline-flex rounded-full h-2 w-2"
+              style={{ background: "var(--accent-emerald)" }}
+            />
           </span>
           ● NOOR ENGINE v2.1
         </div>
 
-        {/* Notifications Button */}
-        <div className="relative relative-dropdown">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`${unreadNotifications} unread notifications`}
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowUserDropdown(false);
-            }}
-            className={cn(
-              "text-slate-400 hover:text-pulse-cyan hover:bg-aether-slate/40 rounded-lg relative cursor-pointer",
-              showNotifications && "bg-aether-slate/40 text-pulse-cyan"
-            )}
+        {/* Notifications */}
+        <div className="relative notif-dropdown">
+          <button
+            aria-label={`${unreadCount} unread notifications`}
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative w-8 h-8 flex items-center justify-center rounded-lg transition-all"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--accent-cyan)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
           >
-            <Bell className="w-4.5 h-4.5" />
-            {unreadNotifications > 0 && (
-              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-pulse-magenta border border-aether-void" />
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border"
+                style={{
+                  background: "var(--accent-crimson)",
+                  borderColor: "var(--bg-void)",
+                  boxShadow: "0 0 6px rgba(230, 57, 70, 0.6)",
+                }}
+              />
             )}
-          </Button>
+          </button>
 
-          {/* Absolute glassmorphic notifications menu with cyan border top */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2.5 w-80 aether-glass border border-pulse-cyan/15 border-t-2 border-t-pulse-cyan rounded-md p-4 shadow-2xl z-50 space-y-3 animate-in slide-in-from-top-2 duration-200">
-              <div className="flex justify-between items-center pb-2 border-b border-aether-ink">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-pulse-cyan font-mono">SYSTEM ALERTS</span>
-                {unreadNotifications > 0 && (
-                  <button 
-                    onClick={() => {
-                      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                      toast.success("All notifications marked as read.");
-                    }}
-                    className="text-[9px] font-bold text-pulse-cyan/70 hover:text-pulse-cyan transition-colors font-mono uppercase tracking-wider"
+            <div
+              className="absolute right-0 mt-2 w-72 rounded-xl p-4 shadow-2xl z-50 space-y-3 animate-in slide-in-from-top-2 duration-200"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--bg-border)",
+                borderTop: "2px solid var(--accent-crimson)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+              }}
+            >
+              <div
+                className="flex justify-between items-center pb-2 border-b"
+                style={{ borderColor: "var(--bg-border)" }}
+              >
+                <span
+                  className="text-[10px] font-bold uppercase tracking-widest"
+                  style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--accent-crimson)" }}
+                >
+                  SYSTEM ALERTS
+                </span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
+                    className="text-[9px] font-bold transition-colors"
+                    style={{ fontFamily: "var(--font-jetbrains-mono)", color: "var(--text-dim)" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--accent-cyan)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)"; }}
                   >
                     Mark all read
                   </button>
@@ -171,91 +259,45 @@ export function TopNav({ onMenuClick }: TopNavProps) {
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {notifications.map((notif) => {
-                  let IconComponent = Cpu;
-                  if (notif.type === "guardian") IconComponent = User;
-                  if (notif.type === "match") IconComponent = ShieldAlert;
-
+                  const Icon = notif.type === "guardian" ? Activity : ShieldAlert;
                   return (
-                    <div 
+                    <div
                       key={notif.id}
                       onClick={() => {
-                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                        toast.info(`Alert detail: "${notif.text}"`);
+                        setNotifications((prev) =>
+                          prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
+                        );
+                        toast.info(notif.text);
                       }}
                       className={cn(
-                        "p-2.5 rounded-md border text-[10px] leading-snug cursor-pointer transition-all flex items-center justify-between gap-3 font-mono",
-                        notif.read 
-                          ? "bg-aether-void/30 border-aether-ink text-slate-500 hover:bg-aether-slate/20" 
-                          : "bg-aether-slate/40 border-pulse-cyan/10 text-slate-200 hover:bg-aether-slate/60 font-semibold border-l-2 border-l-pulse-cyan"
+                        "p-2.5 rounded-md border text-[10px] leading-snug cursor-pointer transition-all flex items-center gap-2.5",
+                        notif.read ? "opacity-50" : ""
                       )}
+                      style={{
+                        background: notif.read ? "transparent" : "rgba(0, 180, 216, 0.04)",
+                        border: notif.read
+                          ? `1px solid var(--bg-border)`
+                          : `1px solid rgba(0, 180, 216, 0.15)`,
+                        borderLeft: notif.read ? "" : "2px solid var(--accent-cyan)",
+                        fontFamily: "var(--font-jetbrains-mono)",
+                        color: notif.read ? "var(--text-dim)" : "var(--text-secondary)",
+                      }}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <IconComponent className={cn("w-3.5 h-3.5 flex-shrink-0", notif.read ? "text-slate-600" : "text-pulse-cyan")} />
-                        <span className="truncate">{notif.text}</span>
-                      </div>
+                      <Icon
+                        className="w-3.5 h-3.5 flex-shrink-0"
+                        style={{ color: notif.read ? "var(--text-dim)" : "var(--accent-cyan)" }}
+                      />
+                      <span className="truncate">{notif.text}</span>
                       {!notif.read && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-pulse-cyan flex-shrink-0" />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-auto"
+                          style={{ background: "var(--accent-crimson)" }}
+                        />
                       )}
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Profile Avatar custom dropdown with life-rose top border */}
-        <div className="relative relative-dropdown flex items-center">
-          <div 
-            onClick={() => {
-              setShowUserDropdown(!showUserDropdown);
-              setShowNotifications(false);
-            }}
-            className="flex items-center gap-2 pl-3 border-l border-aether-ink cursor-pointer group"
-          >
-            <div className="w-8 h-8 rounded-full bg-aether-slate border border-pulse-cyan/20 group-hover:border-pulse-cyan flex items-center justify-center font-bold text-xs text-pulse-cyan transition-all select-none shadow-md">
-              SK
-            </div>
-            <span className="hidden lg:inline text-xs font-bold text-slate-300 group-hover:text-slate-100 transition-colors font-space">S. Kulkarni</span>
-          </div>
-
-          {/* User profile dropdown formatted in Aether styles */}
-          {showUserDropdown && (
-            <div className="absolute right-0 top-10 mt-2 w-48 aether-glass border border-pulse-cyan/15 border-t-2 border-t-life-rose rounded-md p-1.5 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200">
-              <div className="px-3 py-2.5 border-b border-aether-ink mb-1">
-                <p className="text-[11px] font-bold text-white font-space">S. Kulkarni</p>
-                <p className="text-[8px] text-pulse-cyan font-bold tracking-widest uppercase mt-1 font-mono">COORDINATOR</p>
-              </div>
-              
-              <button 
-                onClick={() => {
-                  toast.success("Profile panel loaded (Demo mode).");
-                  setShowUserDropdown(false);
-                }}
-                className="w-full text-left px-3 py-2 rounded-md text-[10px] font-semibold text-slate-350 hover:text-white hover:bg-aether-slate/60 flex items-center gap-2 transition-all font-mono uppercase tracking-wider cursor-pointer"
-              >
-                <User className="w-3.5 h-3.5 text-pulse-cyan" />
-                Profile
-              </button>
-              
-              <button 
-                onClick={() => {
-                  toast.success("Clinical settings synced successfully.");
-                  setShowUserDropdown(false);
-                }}
-                className="w-full text-left px-3 py-2 rounded-md text-[10px] font-semibold text-slate-350 hover:text-white hover:bg-aether-slate/60 flex items-center gap-2 transition-all font-mono uppercase tracking-wider cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5 text-pulse-cyan" />
-                Settings
-              </button>
-              
-              <button 
-                onClick={handleLogOut}
-                className="w-full text-left px-3 py-2.5 rounded-md text-[10px] font-bold text-pulse-magenta hover:bg-pulse-magenta/5 flex items-center gap-2 transition-all mt-1 border-t border-aether-ink/50 pt-2.5 font-mono uppercase tracking-wider cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5 text-pulse-magenta" />
-                Logout
-              </button>
             </div>
           )}
         </div>

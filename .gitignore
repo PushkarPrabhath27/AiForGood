@@ -17,6 +17,7 @@
 venv/
 env/
 ENV/
+# lib/ (Removed to allow frontend/lib)
 lib64/
 bin/
 include/
@@ -36,6 +37,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+# lib/ (Removed to allow frontend/lib)
 parts/
 sdist/
 var/

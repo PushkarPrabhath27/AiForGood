@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Syne, Outfit, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/shared/Providers";
 import "./globals.css";
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-outfit",
 });
 
-const spaceGrotesk = Space_Grotesk({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-syne",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -29,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col bg-[#050508] text-slate-100 font-sans">
+    <html lang="en" className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
+      <body className="min-h-full flex flex-col bg-[#050508] text-slate-100 font-body">
         <Providers>{children}</Providers>
       </body>
     </html>
