@@ -234,8 +234,9 @@ export function HbForecastChart({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            className="w-full h-[300px]"
           >
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartData}
                 onClick={handleChartClick}
@@ -358,7 +359,7 @@ export function HbForecastChart({
                   legendType="none"
                 />
 
-                {/* Historical Hb — solid crimson with draw animation */}
+                {/* Historical Hb — solid crimson */}
                 <Line
                   name="Historical Hb"
                   type="monotone"
@@ -369,7 +370,6 @@ export function HbForecastChart({
                   activeDot={{ r: 5, stroke: "var(--accent-crimson)", strokeWidth: 2, fill: "var(--bg-void)" }}
                   connectNulls
                   legendType="none"
-                  style={{ animation: "draw-line 1.5s ease-out forwards" }}
                 />
 
                 {/* NOOR Forecast — dashed cyan */}
@@ -385,7 +385,6 @@ export function HbForecastChart({
                   activeDot={{ r: 5, stroke: "var(--accent-cyan)", strokeWidth: 2, fill: "var(--bg-void)" }}
                   connectNulls
                   legendType="none"
-                  style={{ animation: "draw-line 1.5s ease-out forwards" }}
                 />
 
                 {/* Threshold 7.0 */}

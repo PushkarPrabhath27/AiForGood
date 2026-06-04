@@ -128,7 +128,14 @@ function MapInstanceTracker({ mapRef }: { mapRef: React.MutableRefObject<L.Map |
   React.useEffect(() => {
     mapRef.current = map;
     return () => {
-      mapRef.current = null;
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+        } catch (e) {
+          console.warn("[Leaflet Map Clean Up Warn]:", e);
+        }
+        mapRef.current = null;
+      }
     };
   }, [map, mapRef]);
   return null;
@@ -142,19 +149,6 @@ export function CityBloodMapInner({
 }: CityBloodMapInnerProps) {
   const hyderabadCenter: [number, number] = [17.385, 78.4867];
   const mapRef = React.useRef<L.Map | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      if (mapRef.current) {
-        try {
-          mapRef.current.remove();
-          mapRef.current = null;
-        } catch (e) {
-          console.warn("[Leaflet Map Clean Up Warn]:", e);
-        }
-      }
-    };
-  }, []);
 
   return (
     <div
