@@ -163,6 +163,7 @@ export default function PatientGuardianPage({ params }: GuardianPageProps) {
       <GuardianCard
         guardian={selectedGuardian}
         patientName={patient.name}
+        patientId={patient.id}
         open={!!selectedGuardian}
         onClose={() => setSelectedGuardian(null)}
       />

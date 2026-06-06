@@ -13,6 +13,7 @@ class GuardianSchema(BaseModel):
     patient_id: str
     name: str
     phone_last4: str = Field(..., alias="phone")  # RENAME from phone but deserialize from phone model attribute
+    telegram_chat_id: Optional[str] = None
     role: Literal["primary", "secondary", "rare_specialist"]
     status: Literal["active", "cooldown", "pending", "unavailable", "empty"]
     last_donation_date: Optional[date] = None
@@ -63,3 +64,19 @@ class MobilizationStatusResponse(BaseModel):
     days_to_transfusion: int
     confirmed_count: int
     total_count: int
+
+
+class UpdateGuardianRequest(BaseModel):
+    """
+    Schema for updating a guardian's editable fields from the dashboard.
+    """
+    telegram_chat_id: Optional[str] = Field(None, max_length=20)
+    preferred_language: Optional[str] = Field(None, max_length=5)
+
+
+class SendGuardianMessageRequest(BaseModel):
+    """
+    Schema for sending a custom message to a guardian via Telegram.
+    """
+    message: Optional[str] = None
+

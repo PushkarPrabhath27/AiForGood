@@ -1,20 +1,29 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import json
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from core.config import settings
 from core.exceptions import PatientNotFoundError, GuardianCircleError
 from core.logging import logger
 from db.session import get_db_session
 from models.patient import Patient
 from models.guardian import Guardian
 from schemas.common import ApiResponse, ApiError
-from schemas.guardian import GuardianCircleResponse, GuardianSchema, MobilizationStatusResponse
+from schemas.guardian import (
+    GuardianCircleResponse,
+    GuardianSchema,
+    MobilizationStatusResponse,
+    UpdateGuardianRequest,
+    SendGuardianMessageRequest,
+)
+from schemas.messaging import NotifyAlertResponse
 from services.guardian_service import calculate_circle_health, build_circle
 from services.mobilization_service import trigger_mobilization, get_mobilization_status
+from services.messaging_service import send_telegram_message, generate_guardian_message
 
 router = APIRouter()
 
@@ -63,6 +72,7 @@ async def get_patient_guardian_circle(
             patient_id=g.patient_id,
             name=g.name,
             phone=g.phone,
+            telegram_chat_id=g.telegram_chat_id,
             role=g.role,
             status=g.status,
             last_donation_date=g.last_donation_date.date() if isinstance(g.last_donation_date, datetime) else g.last_donation_date,
@@ -157,5 +167,142 @@ async def mobilize_guardian_circle(
     return ApiResponse(
         success=True,
         data=response_data,
+        error=None
+    )
+
+
+@router.patch("/{patient_id}/guardians/{guardian_id}", response_model=ApiResponse[GuardianSchema])
+async def update_patient_guardian(
+    patient_id: str,
+    guardian_id: str,
+    payload: UpdateGuardianRequest,
+    db: AsyncSession = Depends(get_db_session)
+) -> ApiResponse[GuardianSchema]:
+    """
+    Updates editable fields of a specific guardian in a patient's circle.
+    """
+    logger.info("update_guardian_request_received", patient_id=patient_id, guardian_id=guardian_id)
+    
+    # 1. Fetch Guardian details
+    stmt = select(Guardian).where(Guardian.id == guardian_id, Guardian.patient_id == patient_id)
+    res = await db.execute(stmt)
+    guardian = res.scalar_one_or_none()
+    
+    if not guardian:
+        logger.warning("update_guardian_not_found", patient_id=patient_id, guardian_id=guardian_id)
+        raise HTTPException(status_code=404, detail="Guardian not found for this patient.")
+        
+    # 2. Apply updates
+    if payload.telegram_chat_id is not None:
+        val = payload.telegram_chat_id.strip()
+        guardian.telegram_chat_id = val if val else None
+    if payload.preferred_language is not None:
+        guardian.preferred_language = payload.preferred_language
+        
+    db.add(guardian)
+    await db.commit()
+    await db.refresh(guardian)
+    
+    # Map to schema structures
+    mapped = GuardianSchema(
+        id=guardian.id,
+        patient_id=guardian.patient_id,
+        name=guardian.name,
+        phone=guardian.phone,
+        telegram_chat_id=guardian.telegram_chat_id,
+        role=guardian.role,
+        status=guardian.status,
+        last_donation_date=guardian.last_donation_date.date() if isinstance(guardian.last_donation_date, datetime) else guardian.last_donation_date,
+        next_eligible_date=guardian.next_eligible_date.date() if isinstance(guardian.next_eligible_date, datetime) else guardian.next_eligible_date,
+        donation_count=guardian.donation_count,
+        response_latency_avg_hours=guardian.response_latency_avg_hours,
+        preferred_language=guardian.preferred_language,
+        compatibility_score=guardian.compatibility_score,
+        reliability_score=guardian.reliability_score,
+        geography_score=guardian.geography_score
+    )
+    
+    logger.info("update_guardian_completed", guardian_id=guardian_id)
+    return ApiResponse(
+        success=True,
+        data=mapped,
+        error=None
+    )
+
+
+@router.post("/{patient_id}/guardians/{guardian_id}/message", response_model=ApiResponse[NotifyAlertResponse])
+async def message_patient_guardian(
+    patient_id: str,
+    guardian_id: str,
+    payload: SendGuardianMessageRequest,
+    db: AsyncSession = Depends(get_db_session)
+) -> ApiResponse[NotifyAlertResponse]:
+    """
+    Sends a custom or template message to a specific guardian via Telegram.
+    Transitions the guardian to 'pending' state (waiting for response).
+    """
+    logger.info("message_guardian_request_received", patient_id=patient_id, guardian_id=guardian_id)
+    
+    # 1. Fetch Patient details
+    patient_stmt = select(Patient).where(Patient.id == patient_id)
+    patient_res = await db.execute(patient_stmt)
+    patient = patient_res.scalar_one_or_none()
+    if not patient:
+        logger.warning("message_guardian_patient_not_found", patient_id=patient_id)
+        raise PatientNotFoundError(f"Patient with ID {patient_id} does not exist.")
+        
+    # 2. Fetch Guardian details
+    stmt = select(Guardian).where(Guardian.id == guardian_id, Guardian.patient_id == patient_id)
+    res = await db.execute(stmt)
+    guardian = res.scalar_one_or_none()
+    if not guardian:
+        logger.warning("message_guardian_not_found", patient_id=patient_id, guardian_id=guardian_id)
+        raise HTTPException(status_code=404, detail="Guardian not found for this patient.")
+        
+    # 3. Determine message body
+    message_body = ""
+    if payload.message and payload.message.strip():
+        message_body = payload.message.strip()
+    else:
+        # Generate default empathetic template message via Gemini
+        context = {
+            "date": patient.next_transfusion_predicted.date().isoformat() if patient.next_transfusion_predicted else "soon",
+            "time": "10:00 AM",
+            "pre_hb": "6.8",
+            "post_hb": "10.4",
+            "day": "Tuesday",
+            "score": "94%"
+        }
+        message_body = await generate_guardian_message(guardian, patient, "t10_soft_ask", context)
+        
+    # 4. Dispatch via Telegram Bot
+    chat_id = guardian.telegram_chat_id or settings.telegram_chat_id or ""
+    delivery = await send_telegram_message(
+        chat_id=chat_id,
+        message=message_body,
+        buttons=[
+            {"id": "confirm_donation", "title": "Yes, I will donate"},
+            {"id": "decline_donation", "title": "No, I'm busy"}
+        ]
+    )
+    
+    # 5. Transition status to pending (mobilization dispatched)
+    if guardian.status != "empty":
+        guardian.status = "pending"
+        db.add(guardian)
+        await db.commit()
+        
+    # Mask phone for privacy in response envelope
+    phone = guardian.phone
+    masked_phone = f"****{phone[-4:]}" if len(phone) >= 4 else phone
+    
+    logger.info("message_guardian_completed", guardian_id=guardian_id, delivery_status=delivery.get("status"))
+    return ApiResponse(
+        success=True,
+        data=NotifyAlertResponse(
+            delivery_status=delivery.get("status", "sent"),
+            recipient_phone=masked_phone,
+            message_body=message_body
+        ),
         error=None
     )

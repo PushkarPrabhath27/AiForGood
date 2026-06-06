@@ -1,12 +1,17 @@
 from __future__ import annotations
 import re
+import json
 from datetime import datetime, date
 from typing import Optional
+import httpx
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from google import genai
+from google.genai import types
 
+from core.config import settings
 from core.logging import logger
 from db.session import get_db_session
 from models.patient import Patient
@@ -138,6 +143,42 @@ async def handle_chatbot_message(
                 "current_hb": "10.4",
                 "next_transfusion_predicted": "2024-11-03"
             }
+
+    # If Gemini API key is configured, enrich and customize response via LLM
+    if settings.gemini_api_key:
+        system_prompt = (
+            "You are Saathi, the virtual clinical assistant for RaktaSetu NOOR, a Thalassemia care platform. "
+            "Help clinical coordinators, patients, and donors. Answer in a warm, compassionate, "
+            "and clinically precise manner. Max 4 sentences. Speak directly and helpfully."
+        )
+        context_str = f"Database Context:\n"
+        if context_retrieved:
+            context_str += json.dumps(context_retrieved, indent=2)
+        else:
+            context_str += "No matching database record found for this request."
+        
+        prompt = (
+            f"User Query: {payload.message}\n\n"
+            f"Retrieved DB Context: {context_str}\n\n"
+            "Please formulate a warm, conversational, and direct reply to the user using the database context."
+        )
+
+        try:
+            async with genai.Client(api_key=settings.gemini_api_key) as client:
+                response = await client.aio.models.generate_content(
+                    model=settings.gemini_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7,
+                        max_output_tokens=200,
+                    )
+                )
+                if response.text:
+                    reply_text = response.text.strip()
+                logger.info("chatbot_reply_generated_via_gemini", query=payload.message)
+        except Exception as err:
+            logger.warning("chatbot_gemini_call_failed_using_deterministic_fallback", error=str(err))
 
     logger.info("chatbot_reply_prepared", reply=reply_text[:60])
     return ApiResponse(

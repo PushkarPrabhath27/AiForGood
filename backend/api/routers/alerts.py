@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from core.config import settings
 from core.exceptions import PatientNotFoundError, GuardianCircleError
 from core.logging import logger
 from db.session import get_db_session
@@ -13,7 +14,7 @@ from models.guardian import Guardian
 from models.alert import Alert
 from schemas.common import ApiResponse
 from schemas.messaging import NotifyAlertResponse
-from services.messaging_service import generate_guardian_message, send_whatsapp_message
+from services.messaging_service import generate_guardian_message, send_telegram_message
 
 router = APIRouter()
 
@@ -93,8 +94,9 @@ async def notify_patient_alert(
     logger.info("generating_alert_message_via_clinical_writer", guardian_id=recipient.id, alert_type=alert.alert_type)
     message_body = await generate_guardian_message(recipient, patient, msg_type, context)
     
-    # Send WhatsApp notification
-    delivery = await send_whatsapp_message(recipient.phone, message_body)
+    # Send Telegram notification — use guardian's chat ID if linked, else coordinator default
+    chat_id = recipient.telegram_chat_id or settings.telegram_chat_id or ""
+    delivery = await send_telegram_message(chat_id, message_body)
 
     # 6. Update database record to track sent status
     alert.sent_at = datetime.utcnow()

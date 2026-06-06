@@ -125,6 +125,7 @@ export interface Guardian {
   id: string;
   name: string;
   phone_last4: string; // Masked: "****1234"
+  telegram_chat_id?: string | null;
   role: GuardianRole;
   status: GuardianStatus;
   last_donation_date: string | null; // ISO date

@@ -21,6 +21,7 @@ class Guardian(BaseModel):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(15), nullable=False)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # primary, secondary, rare_specialist
     status: Mapped[str] = mapped_column(String(20), nullable=False) # active, cooldown, pending, unavailable, empty
     

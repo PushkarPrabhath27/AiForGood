@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import select
 import json
 import redis.asyncio as aioredis
+import httpx
 
 from db.session import get_session_maker
 from models.patient import Patient
@@ -18,6 +19,8 @@ from workers.hb_forecast_worker import run_hb_forecast_worker
 from workers.circle_health_worker import run_circle_health_worker
 from workers.inventory_match_worker import run_inventory_match_worker
 from workers.alloimmunization_worker import run_alloimmunization_worker
+from workers.bank_sync_worker import run_bank_sync_worker
+from services.discovery_service import discover_and_seed_entities
 
 
 @pytest.mark.asyncio
@@ -149,3 +152,111 @@ async def test_inventory_match_worker_executes():
             print(f"Skipping Redis assertion: {str(r_err)}")
         finally:
             await redis_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_bank_sync_worker_pulls_data():
+    """
+    Verifies that the background bank_sync_worker pulls inventory records from
+    configured endpoints, transactionally replaces inventories in the database,
+    and handles success metrics correctly.
+    """
+    # Seed a test blood bank with a mock endpoint
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        # Create a unique blood bank
+        test_bank = BloodBank(
+            name="Syncer Test Bank",
+            city="HYD",
+            lat=17.40,
+            lng=78.50,
+            api_endpoint="http://fake-blood-bank-api.com/inventory"
+        )
+        session.add(test_bank)
+        await session.commit()
+        bank_id = test_bank.id
+
+        # Mock inventory response
+        mock_inv = [
+            {"blood_type": "B", "rh_factor": "+", "units_available": 10, "kell": True},
+            {"blood_type": "A", "rh_factor": "-", "units_available": 3}
+        ]
+        
+        mock_response = MagicMock(spec=httpx.Response)
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_inv
+
+        with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_response)) as mock_get:
+            res = await run_bank_sync_worker(session)
+            
+            assert res["job_name"] == "bank_sync_worker"
+            assert res["success_count"] >= 1
+            mock_get.assert_called()
+
+            # Verify database contains the synced inventory items
+            session.expire_all()
+            stmt = select(Inventory).where(Inventory.bank_id == bank_id)
+            db_res = await session.execute(stmt)
+            synced_items = list(db_res.scalars().all())
+            
+            assert len(synced_items) == 2
+            b_unit = next(item for item in synced_items if item.blood_type == "B")
+            assert b_unit.units_available == 10
+            assert b_unit.kell is True
+
+        # Clean up seeded test bank
+        session.expire_all()
+        stmt_bank = select(BloodBank).where(BloodBank.id == bank_id)
+        res_bank = await session.execute(stmt_bank)
+        db_bank = res_bank.scalar_one_or_none()
+        if db_bank:
+            await session.delete(db_bank)
+            await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_discovery_service_queries_osm():
+    """
+    Verifies that discover_and_seed_entities queries OSM Overpass, parses node coordinates,
+    and seeds missing blood banks into the database.
+    """
+    mock_osm_payload = {
+        "elements": [
+            {
+                "type": "node",
+                "id": 999912345,
+                "lat": 17.4200,
+                "lon": 78.4300,
+                "tags": {
+                    "amenity": "blood_bank",
+                    "name": "OSM Discovered Test Bank"
+                }
+            }
+        ]
+    }
+    
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_osm_payload
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        with patch("httpx.AsyncClient.post", AsyncMock(return_value=mock_response)):
+            res = await discover_and_seed_entities(session)
+            
+            assert res["status"] == "success"
+            
+            # Verify the bank exists in the DB
+            session.expire_all()
+            stmt = select(BloodBank).where(BloodBank.name == "OSM Discovered Test Bank")
+            db_res = await session.execute(stmt)
+            bank = db_res.scalar_one_or_none()
+            
+            assert bank is not None
+            assert bank.lat == 17.4200
+            assert "mock-bank-api" in bank.api_endpoint
+
+            # Clean up the seeded test bank
+            await session.delete(bank)
+            await session.commit()
+

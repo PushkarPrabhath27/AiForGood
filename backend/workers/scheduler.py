@@ -52,6 +52,20 @@ async def run_inventory_match_job() -> None:
             logger.error("background_job_failed", job_name="inventory_match", error=str(err))
 
 
+async def run_bank_sync_job() -> None:
+    """Trigger job running periodic inventory pulls from external blood bank endpoints."""
+    logger.info("background_job_triggered", job_name="bank_sync")
+    from workers.bank_sync_worker import run_bank_sync_worker
+    
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            res = await run_bank_sync_worker(session)
+            logger.info("background_job_completed", job_name="bank_sync", result=res)
+        except Exception as err:
+            logger.error("background_job_failed", job_name="bank_sync", error=str(err))
+
+
 def start_scheduler() -> None:
     """
     Initializes and starts the periodic scheduler engine.
@@ -80,6 +94,14 @@ def start_scheduler() -> None:
         run_inventory_match_job,
         trigger=IntervalTrigger(hours=6),
         id="inventory_match_job",
+        replace_existing=True
+    )
+
+    # 4. Register blood bank inventory sync running hourly
+    scheduler.add_job(
+        run_bank_sync_job,
+        trigger=IntervalTrigger(hours=1),
+        id="bank_sync_job",
         replace_existing=True
     )
 

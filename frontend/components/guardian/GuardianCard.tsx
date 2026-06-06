@@ -5,9 +5,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/StatusPill";
-import { Calendar, Phone, Clock, MessageSquare, AlertCircle, RefreshCw } from "lucide-react";
+import { Calendar, Phone, Clock, MessageSquare, AlertCircle, RefreshCw, Save, Send } from "lucide-react";
 import { formatDate } from "@/lib/utils/dates";
-import { useMobilizeCircle } from "@/lib/hooks/useGuardianCircle";
+import { useMobilizeCircle, useUpdateGuardian, useSendGuardianMessage } from "@/lib/hooks/useGuardianCircle";
 import { toast } from "sonner";
 import type { Guardian, GuardianRole, GuardianStatus } from "@/../shared/contracts/api.types";
 import { cn } from "@/lib/utils/cn";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils/cn";
 export interface GuardianCardProps {
   guardian: Guardian | null;
   patientName: string;
+  patientId: string;
   open: boolean;
   onClose: () => void;
 }
@@ -36,15 +37,29 @@ const statusLabels: Record<GuardianStatus, string> = {
 export function GuardianCard({
   guardian,
   patientName = "Priya",
+  patientId,
   open,
   onClose,
 }: GuardianCardProps) {
+  const [chatId, setChatId] = React.useState("");
+  const [customMessage, setCustomMessage] = React.useState("");
+
   const mobilizeCircleMutation = useMobilizeCircle();
+  const updateGuardianMutation = useUpdateGuardian();
+  const sendGuardianMessageMutation = useSendGuardianMessage();
+
+  React.useEffect(() => {
+    if (guardian) {
+      setChatId(guardian.telegram_chat_id || "");
+      const template = `Hi ${guardian.name}, this is RaktaSetu Niloufer. ${patientName}'s scheduled blood transfusion is approaching. Are you available to support her by donating?`;
+      setCustomMessage(template);
+    }
+  }, [guardian, patientName]);
 
   if (!guardian) return null;
 
   const handleMobilizeClick = () => {
-    mobilizeCircleMutation.mutate(DEMO_PATIENT_ID(), {
+    mobilizeCircleMutation.mutate(patientId, {
       onSuccess: () => {
         toast.success(`WhatsApp mobilization broadcast dispatched for Suresh!`);
       },
@@ -54,8 +69,35 @@ export function GuardianCard({
     });
   };
 
-  const DEMO_PATIENT_ID = () => {
-    return "550e8400-e29b-41d4-a716-446655440001";
+  const handleSaveChatId = async () => {
+    try {
+      await updateGuardianMutation.mutateAsync({
+        patientId: patientId,
+        guardianId: guardian.id,
+        data: { telegram_chat_id: chatId },
+      });
+      toast.success("Telegram Chat ID updated successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update Telegram Chat ID.");
+    }
+  };
+
+  const handleSendMessageClick = () => {
+    sendGuardianMessageMutation.mutate(
+      {
+        patientId: patientId,
+        guardianId: guardian.id,
+        message: customMessage,
+      },
+      {
+        onSuccess: (res: any) => {
+          toast.success(`Telegram message dispatched to ${guardian.name}!`);
+        },
+        onError: (err: any) => {
+          toast.error(err.message || "Failed to dispatch Telegram message.");
+        },
+      }
+    );
   };
 
   const formattedLanguage = guardian.preferred_language === "te" ? "Telugu" :
@@ -159,12 +201,86 @@ export function GuardianCard({
                   +91 ******{guardian.phone_last4}
                 </span>
               </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-aether-ink gap-4">
+                <span className="text-slate-500 uppercase tracking-wider flex-shrink-0">Telegram Chat ID:</span>
+                <div className="flex items-center gap-1.5 flex-1 max-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="Not linked"
+                    value={chatId}
+                    onChange={(e) => setChatId(e.target.value)}
+                    className="h-7 w-full bg-aether-midnight border border-aether-ink/80 rounded px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-pulse-cyan/50 font-mono"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleSaveChatId}
+                    disabled={updateGuardianMutation.isPending || chatId === (guardian.telegram_chat_id || "")}
+                    className="h-7 px-2.5 bg-aether-slate hover:bg-aether-slate/85 border border-pulse-cyan/20 text-pulse-cyan text-[8px] tracking-widest uppercase font-mono flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updateGuardianMutation.isPending ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex justify-between py-1 border-b border-aether-ink">
                 <span className="text-slate-500 uppercase tracking-wider">Preferred Language:</span>
                 <span className="font-bold text-slate-350 uppercase">{formattedLanguage}</span>
               </div>
             </div>
           </div>
+
+          {/* Custom Telegram Messaging Section */}
+          {guardian.status !== "empty" && (
+            <div className="space-y-3 pt-2 font-mono border-t border-aether-ink">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none">
+                Contact via Telegram Bot
+              </h4>
+              <div className="space-y-2 bg-aether-void/60 p-3 rounded-md border border-aether-ink">
+                <div className="flex justify-between items-center">
+                  <span className="text-[8px] font-bold uppercase text-slate-500 tracking-widest leading-none">
+                    Preview / Edit Message
+                  </span>
+                  <span className="text-[7px] text-pulse-cyan font-bold uppercase tracking-widest px-1 py-0.5 rounded bg-pulse-cyan/5 border border-pulse-cyan/10">
+                    Live Telegram Bot
+                  </span>
+                </div>
+                <textarea
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  rows={4}
+                  className="w-full text-[10px] bg-aether-midnight border border-aether-ink/80 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pulse-cyan/50 font-mono resize-none leading-normal"
+                />
+                
+                {guardian.telegram_chat_id ? (
+                  <span className="text-[7px] text-pulse-emerald block uppercase font-bold tracking-wider">
+                    ✓ Connected: Chat ID {guardian.telegram_chat_id}
+                  </span>
+                ) : (
+                  <span className="text-[7px] text-pulse-amber block uppercase font-bold tracking-wider animate-pulse">
+                    ⚠️ Telegram Chat ID not linked! Defaulting to Coordinator Inbox.
+                  </span>
+                )}
+
+                <button
+                  onClick={handleSendMessageClick}
+                  disabled={sendGuardianMessageMutation.isPending}
+                  className="w-full bg-gradient-to-r from-pulse-cyan via-pulse-cyan/80 to-pulse-cyan/60 hover:brightness-110 text-aether-void font-bold h-9 rounded flex items-center justify-center gap-1.5 cursor-pointer uppercase text-[9px] tracking-widest font-mono border border-white/10"
+                >
+                  {sendGuardianMessageMutation.isPending ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  Send Telegram Notification
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Footers: Rethemed direct confirm button in custom gradients */}

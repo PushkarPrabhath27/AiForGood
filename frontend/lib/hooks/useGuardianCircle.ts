@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getGuardianCircle, mobilizeCircle } from "../api/guardians";
+import { getGuardianCircle, mobilizeCircle, updateGuardian, sendGuardianMessage } from "../api/guardians";
 import { QUERY_KEYS } from "../constants";
 
 export function useGuardianCircle(patientId: string) {
@@ -29,3 +29,46 @@ export function useMobilizeCircle() {
     },
   });
 }
+
+export function useUpdateGuardian() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      patientId,
+      guardianId,
+      data,
+    }: {
+      patientId: string;
+      guardianId: string;
+      data: { telegram_chat_id?: string; preferred_language?: string };
+    }) => updateGuardian(patientId, guardianId, data),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guardianCircle(variables.patientId),
+      });
+    },
+  });
+}
+
+export function useSendGuardianMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      patientId,
+      guardianId,
+      message,
+    }: {
+      patientId: string;
+      guardianId: string;
+      message?: string;
+    }) => sendGuardianMessage(patientId, guardianId, message),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guardianCircle(variables.patientId),
+      });
+    },
+  });
+}
+

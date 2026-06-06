@@ -297,3 +297,56 @@ async def sync_blood_bank_inventory_endpoint(
         data=f"Inventory synchronization completed successfully for bank '{bank.name}'.",
         error=None
     )
+
+
+@router.get("/mock-bank-api", response_model=List[Dict[str, Any]])
+async def get_mock_bank_inventory(bank_name: str | None = None) -> List[Dict[str, Any]]:
+    """
+    Returns simulated real-time inventory for testing synchronization worker queries.
+    Dynamically generates stock levels, including rare Kell/Duffy/Kidd phenotype matches.
+    """
+    logger.info("mock_bank_api_query_received", bank_name=bank_name)
+    
+    # Return realistic blood stock distribution
+    return [
+        {
+            "blood_type": "B",
+            "rh_factor": "+",
+            "kell": True,  # Kell-negative unit (critical for Vikram's match!)
+            "duffy": False,
+            "kidd": False,
+            "units_available": 3
+        },
+        {
+            "blood_type": "A",
+            "rh_factor": "+",
+            "kell": False,
+            "duffy": False,
+            "kidd": False,
+            "units_available": 6
+        },
+        {
+            "blood_type": "O",
+            "rh_factor": "+",
+            "kell": False,
+            "duffy": False,
+            "kidd": False,
+            "units_available": 4
+        },
+        {
+            "blood_type": "O",
+            "rh_factor": "-",
+            "kell": False,
+            "duffy": True,  # Duffy-negative unit
+            "kidd": False,
+            "units_available": 2
+        },
+        {
+            "blood_type": "AB",
+            "rh_factor": "+",
+            "kell": False,
+            "duffy": False,
+            "kidd": False,
+            "units_available": 1
+        }
+    ]

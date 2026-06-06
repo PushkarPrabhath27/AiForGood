@@ -18,6 +18,28 @@ async def lifespan(app: FastAPI):
     if settings.app_env != "test":
         from workers.scheduler import start_scheduler
         start_scheduler()
+        
+        # Trigger non-blocking OSM entity discovery and initial stock sync
+        import asyncio
+        from services.discovery_service import discover_and_seed_entities
+        from workers.bank_sync_worker import run_bank_sync_worker
+        from db.session import get_session_maker
+        
+        async def run_discovery_and_sync():
+            logger.info("running_startup_osm_discovery_task")
+            session_maker = get_session_maker()
+            async with session_maker() as session:
+                try:
+                    disc_res = await discover_and_seed_entities(session)
+                    logger.info("startup_osm_entity_discovery_completed", result=disc_res)
+                    
+                    sync_res = await run_bank_sync_worker(session)
+                    logger.info("startup_inventory_sync_completed", result=sync_res)
+                except Exception as e:
+                    logger.error("startup_osm_discovery_task_failed", error=str(e))
+                    
+        asyncio.create_task(run_discovery_and_sync())
+
     yield
     if settings.app_env != "test":
         from workers.scheduler import stop_scheduler
@@ -72,7 +94,7 @@ app.include_router(health.router, prefix="/health", tags=["System Diagnostics"])
 
 # Register API v1 sub-routers
 from fastapi import APIRouter
-from api.routers import grid, alerts, chatbot, patients
+from api.routers import grid, alerts, chatbot, patients, messaging
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patients.router, prefix="/patients", tags=["Patients Directory"])
 api_router.include_router(forecasts.router, prefix="/patients", tags=["Forecasting"])
@@ -80,6 +102,7 @@ api_router.include_router(guardians.router, prefix="/patients", tags=["Guardians
 api_router.include_router(alerts.router, prefix="/patients", tags=["Alerts"])
 api_router.include_router(grid.router, prefix="/grid", tags=["RaktaGrid Optimization"])
 api_router.include_router(chatbot.router, tags=["Saathi Chatbot"])
+api_router.include_router(messaging.router, tags=["WhatsApp Webhook"])
 app.include_router(api_router)
 
 @app.get("/")

@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     twilio_whatsapp_from: str = "whatsapp:+14155238886"
     sarvam_api_key: str = ""
     
+    # Premium Zero-Cost Integrations
+    google_api_key: str = ""
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-preview-05-20"
+
+    # Telegram Bot (dev/demo messaging — replaces WhatsApp)
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""  # Default coordinator chat; overridden per-guardian
+    
     # CORS White-list
     frontend_url: str = "http://localhost:3000"
 
