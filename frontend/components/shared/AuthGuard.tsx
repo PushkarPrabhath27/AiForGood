@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { getCurrentUser } from "aws-amplify/auth";
+import { Loader2 } from "lucide-react";
 
 export interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-// Auth removed — direct access, no login gate.
-// Keeping keyboard shortcut hotkeys for demo navigation.
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,6 +40,50 @@ export function AuthGuard({ children }: AuthGuardProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [router]);
+
+  React.useEffect(() => {
+    const poolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    
+    // Bypass authentication checks if Cognito pool is set to placeholders
+    if (!poolId || poolId.includes("mock") || poolId.includes("XXXX")) {
+      setIsAuthenticated(true);
+      return;
+    }
+
+    async function checkAuth() {
+      try {
+        await getCurrentUser();
+        setIsAuthenticated(true);
+      } catch (err) {
+        setIsAuthenticated(false);
+        if (pathname !== "/auth") {
+          router.push("/auth");
+        }
+      }
+    }
+    checkAuth();
+  }, [pathname, router]);
+
+  if (isAuthenticated === null) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-8 space-y-4"
+        style={{ background: "var(--bg-void)" }}
+      >
+        <div className="relative">
+          <div
+            className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: "rgba(230, 57, 70, 0.3)", borderTopColor: "var(--accent-crimson)" }}
+          />
+        </div>
+        <p
+          className="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono"
+        >
+          Securing session...
+        </p>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

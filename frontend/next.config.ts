@@ -4,8 +4,16 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["msw"],
+  output: "export",
+  trailingSlash: true,
   images: {
-    remotePatterns: [],
+    unoptimized: true,
+  },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+    NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
+    NEXT_PUBLIC_CLOUDFRONT_URL: process.env.NEXT_PUBLIC_CLOUDFRONT_URL,
   },
   webpack: (config, { isServer }) => {
     if (isServer) {

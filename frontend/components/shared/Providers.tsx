@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { configureAmplify } from "@/lib/auth-config";
+
+configureAmplify();
 
 interface ProvidersProps {
   children: React.ReactNode;

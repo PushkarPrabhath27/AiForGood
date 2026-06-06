@@ -10,6 +10,7 @@ import {
   mockMatches
 } from "./fixtures";
 import type { ApiResponse, HbReadingResponse, MobilizationStatusResponse } from "@/../shared/contracts/api.types";
+import { format, startOfWeek, addWeeks } from "date-fns";
 
 // In-memory state tracking for dynamic demo transitions
 let dynamicSureshStatus: "pending" | "active" = "pending";
@@ -116,6 +117,24 @@ export const handlers = [
 
   // 6. Get Guardian Circle
   http.get("*/api/v1/patients/:patient_id/guardian-circle", ({ params }) => {
+    const { patient_id } = params;
+
+    if (patient_id === DEMO.VIKRAM_ID) {
+      return HttpResponse.json({
+        success: true,
+        data: {
+          patient_id: DEMO.VIKRAM_ID,
+          coverage_score: 45,
+          engagement_score: 52,
+          resilience_score: 38,
+          mobilization_status: "failed",
+          days_to_transfusion: 18,
+          guardians: [],
+        },
+        error: null,
+      });
+    }
+
     // Dynamic Suresh confirmation details
     const baseCircle = { ...mockGuardianCircle };
     baseCircle.guardians = mockGuardianCircle.guardians.map((g) => {
@@ -155,6 +174,19 @@ export const handlers = [
         contacted_count: 8,
         message: "SMS and WhatsApp broadcasts successfully dispatched. Suresh confirmed active.",
       } as MobilizationStatusResponse,
+      error: null,
+    });
+  }),
+
+  // 7b. Re-engage Guardian
+  http.post("*/api/v1/guardians/:guardian_id/reengage", ({ params }) => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        guardian_id: params.guardian_id as string,
+        status: "success",
+        message: "Re-engagement message generated and successfully sent via Bedrock API.",
+      },
       error: null,
     });
   }),
@@ -234,6 +266,262 @@ export const handlers = [
         reply,
         context_detected,
       },
+      error: null,
+    });
+  }),
+
+  // Get Sentinel Monitor status
+  http.get("*/api/v1/sentinel/:patient_id", ({ params }) => {
+    const { patient_id } = params;
+    
+    if (patient_id === DEMO.VIKRAM_ID) {
+      return HttpResponse.json({
+        success: true,
+        data: {
+          patient_id: DEMO.VIKRAM_ID,
+          sentinel_score: 18,
+          last_checkin: {
+            id: "checkin_v1",
+            patient_id: DEMO.VIKRAM_ID,
+            checkin_date: new Date(Date.now() - 3600000 * 4).toISOString(), // 4h ago
+            symptom_score: 0.15,
+            fatigue_reported: false,
+            activity_level: "normal",
+            caregiver_concern_level: "none",
+            language_detected: "en",
+          },
+          alert_active: false,
+          recommended_action: null,
+        },
+        error: null,
+      });
+    }
+
+    // Default: Priya
+    return HttpResponse.json({
+      success: true,
+      data: {
+        patient_id: DEMO.PRIYA_ID,
+        sentinel_score: 42,
+        last_checkin: {
+          id: "checkin_p1",
+          patient_id: DEMO.PRIYA_ID,
+          checkin_date: new Date(Date.now() - 3600000 * 18).toISOString(), // 18h ago
+          symptom_score: 0.45,
+          fatigue_reported: true,
+          activity_level: "reduced",
+          caregiver_concern_level: "mild",
+          language_detected: "te", // Telugu voice note
+        },
+        alert_active: false,
+        recommended_action: null,
+      },
+      error: null,
+    });
+  }),
+  // Weather Forecasts
+  http.get("*/api/v1/weather/:city_code", () => {
+    const startOfCurrentWeek = startOfWeek(new Date());
+    const data: any[] = [];
+    const bloodTypes = ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"];
+
+    bloodTypes.forEach((bt) => {
+      for (let w = 0; w < 4; w++) {
+        const weekStartStr = format(addWeeks(startOfCurrentWeek, w), "yyyy-MM-dd");
+
+        // Interesting variations matching requirements
+        let severity: "surplus" | "balanced" | "shortage" | "critical" = "balanced";
+        let demand = Math.floor(Math.random() * 5) + 3;
+        let supply = Math.floor(Math.random() * 5) + 3;
+
+        if (w === 3 && bt === "O-") {
+          severity = "critical";
+          demand = 18;
+          supply = 2;
+        } else if (bt === "B-" || bt === "AB-") {
+          severity = "shortage";
+          demand = 8;
+          supply = 2;
+        } else if (bt === "O+" && w === 1) {
+          severity = "surplus";
+          demand = 4;
+          supply = 16;
+        }
+
+        data.push({
+          city_code: "HYD",
+          forecast_week_start: weekStartStr,
+          blood_type: bt,
+          predicted_demand_units: demand,
+          current_supply_units: supply,
+          gap_units: demand - supply,
+          gap_severity: severity,
+        });
+      }
+    });
+
+    return HttpResponse.json({
+      success: true,
+      data,
+      error: null,
+    });
+  }),
+
+  // Cross-Patient matches list
+  http.get("*/api/v1/graph/city/:city_code/cross-patient-matches", () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          donor_id: "donor_raju",
+          donor_name: "Raju Prasad",
+          blood_type: "B+",
+          compatibility_score: 96,
+          distance_km: 3.8,
+          patient_id: DEMO.PRIYA_ID,
+        },
+        {
+          donor_id: "donor_sunita",
+          donor_name: "Sunita Sharma",
+          blood_type: "B+",
+          compatibility_score: 91,
+          distance_km: 4.5,
+          patient_id: "patient_sunita_pt",
+        },
+        {
+          donor_id: "donor_anand",
+          donor_name: "Anand Patel",
+          blood_type: "B+",
+          compatibility_score: 87,
+          distance_km: 5.2,
+          patient_id: "patient_anand_pt",
+        },
+      ],
+      error: null,
+    });
+  }),
+
+  // Route cross-patient donor
+  http.post("*/api/v1/graph/route", async ({ request }) => {
+    const { donor_id, patient_id } = (await request.json()) as any;
+    return HttpResponse.json({
+      success: true,
+      data: {
+        donor_id,
+        patient_id,
+        status: "routed",
+        message: `Donor ${donor_id} successfully routed to patient ${patient_id}.`,
+      },
+      error: null,
+    });
+  }),
+
+  // Update Patient Status
+  http.post("*/api/v1/patients/:patient_id/status", async ({ params, request }) => {
+    const { patient_id } = params;
+    const { status } = (await request.json()) as any;
+
+    const patient = mockPatients.find((p) => p.id === patient_id);
+    if (patient) {
+      patient.status = status;
+    }
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        patient_id,
+        status,
+        message: `Patient status successfully updated to ${status}.`,
+      },
+      error: null,
+    });
+  }),
+
+  // Admin summary metrics
+  http.get("*/api/v1/admin/summary", () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        total_patients: mockPatients.length,
+        total_guardians: 14,
+        total_blood_banks: 5,
+        city_health_score_history: [72, 73, 71, 74, 75, 73, 72, 75, 74, 76, 73, 72, 75, 77, 76, 75, 78, 80, 78, 76, 75, 73, 72, 74, 73, 75, 74, 72, 73, 72],
+        churn_risk_count: 2,
+        fatigue_ceiling_count: 1,
+        active_sentinel_alerts: 1,
+        critical_weather_weeks: 1,
+      },
+      error: null,
+    });
+  }),
+
+  // Grief protocol ledger
+  http.get("*/api/v1/admin/grief-protocol", () => {
+    const deceased = mockPatients
+      .filter((p) => p.status === "deceased")
+      .map((p) => {
+        return {
+          patient_id: p.id,
+          patient_name: p.name,
+          deceased_at: new Date().toISOString(),
+          guardians: [
+            {
+              name: "Kushal Sharma",
+              relation: "Parent",
+              channel: "WhatsApp",
+              message_sent: true,
+              message_date: new Date().toISOString(),
+              transition_consent: "consented",
+            },
+            {
+              name: "Meera Sharma",
+              relation: "Parent",
+              channel: "SMS",
+              message_sent: true,
+              message_date: new Date().toISOString(),
+              transition_consent: "pending",
+            },
+          ],
+        };
+      });
+
+    const preConfiguredDeceased = [
+      {
+        patient_id: "deceased_demo_1",
+        patient_name: "Vikram Sen",
+        deceased_at: "2024-09-12T08:30:00Z",
+        guardians: [
+          {
+            name: "Rajesh Sen",
+            relation: "Father",
+            channel: "WhatsApp",
+            message_sent: true,
+            message_date: "2024-09-12T08:35:00Z",
+            transition_consent: "consented",
+          },
+          {
+            name: "Sita Sen",
+            relation: "Mother",
+            channel: "WhatsApp",
+            message_sent: true,
+            message_date: "2024-09-12T08:36:00Z",
+            transition_consent: "consented",
+          },
+          {
+            name: "Amit Sen",
+            relation: "Uncle",
+            channel: "SMS",
+            message_sent: true,
+            message_date: "2024-09-12T08:35:00Z",
+            transition_consent: "pending",
+          },
+        ],
+      },
+    ];
+
+    return HttpResponse.json({
+      success: true,
+      data: [...deceased, ...preConfiguredDeceased],
       error: null,
     });
   }),

@@ -43,6 +43,7 @@ export interface Patient {
   enrolled_at: string; // ISO datetime
   next_transfusion_predicted: string | null; // ISO date
   hb_current: number | null; // g/dL
+  status: PatientStatus;
 }
 
 export interface PatientListResponse {
@@ -133,6 +134,14 @@ export interface Guardian {
   donation_count: number;
   response_latency_avg_hours: number;
   preferred_language: string; // ISO 639-1, e.g. "te"
+  
+  // Living Circle & Fatigue additions
+  cusum_score?: number;
+  engagement_trend?: "stable" | "declining" | "critical";
+  annual_donation_count?: number;
+  fatigue_ceiling?: number;
+  fatigue_rest_until?: string | null;
+  is_eligible?: boolean;
 }
 
 export interface GuardianCircleResponse {
@@ -215,3 +224,61 @@ export interface ChatbotMessageResponse {
   context_detected?: Record<string, any>;
   suggestions?: string[];
 }
+
+export interface DonorChurnScore {
+  guardian_id: string;
+  cusum_score: number; // 0-∞, alert at > 0.4
+  engagement_trend: "stable" | "declining" | "critical";
+  predicted_churn_date: string | null;
+  reengagement_attempted: boolean;
+}
+
+export interface CaregiverCheckin {
+  id: string;
+  patient_id: string;
+  checkin_date: string;
+  symptom_score: number; // 0-1
+  fatigue_reported: boolean;
+  activity_level: "normal" | "reduced" | "very_low";
+  caregiver_concern_level: "none" | "mild" | "high";
+  language_detected: string;
+}
+
+export interface SentinelStatus {
+  patient_id: string;
+  sentinel_score: number; // 0-100;
+  last_checkin: CaregiverCheckin | null;
+  alert_active: boolean;
+  recommended_action: string | null;
+}
+
+export interface BloodWeatherForecast {
+  city_code: string;
+  forecast_week_start: string;
+  blood_type: BloodGroup;
+  predicted_demand_units: number;
+  current_supply_units: number;
+  gap_units: number;
+  gap_severity: "surplus" | "balanced" | "shortage" | "critical";
+}
+
+export interface DonorFatigueStatus {
+  guardian_id: string;
+  annual_donation_count: number;
+  fatigue_ceiling: number;
+  donations_remaining: number;
+  fatigue_rest_until: string | null;
+  is_eligible: boolean;
+  ineligibility_reason: string | null;
+}
+
+export interface CompatibilityEdge {
+  donor_id: string;
+  patient_id: string;
+  compatibility_score: number;
+  blood_type_match: boolean;
+  extended_phenotype_match: boolean;
+  distance_km: number;
+}
+
+export type PatientStatus = "active" | "inactive" | "deceased" | "transferred";

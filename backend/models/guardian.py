@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime, date
+from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, Integer, DateTime, CheckConstraint, Date, Boolean
 from models.base import BaseModel
@@ -21,12 +23,12 @@ class Guardian(BaseModel):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(15), nullable=False)
-    telegram_chat_id: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    telegram_chat_id: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # primary, secondary, rare_specialist
     status: Mapped[str] = mapped_column(String(20), nullable=False) # active, cooldown, pending, unavailable, empty
     
-    last_donation_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    next_eligible_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_donation_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_eligible_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     donation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     response_latency_avg_hours: Mapped[float] = mapped_column(default=72.0, nullable=False)
     preferred_language: Mapped[str] = mapped_column(String(5), default="en", nullable=False)

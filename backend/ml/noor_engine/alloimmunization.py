@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Dict, Tuple, Union
 from core.constants import (
     CUSUM_ALLOIMMUNIZATION_K,

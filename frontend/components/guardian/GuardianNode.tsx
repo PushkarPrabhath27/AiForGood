@@ -4,6 +4,8 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { Star, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { ChurnRiskBadge } from "./ChurnRiskBadge";
+import { FatigueMeter } from "./FatigueMeter";
 import type { Guardian, GuardianStatus } from "@/../shared/contracts/api.types";
 
 export interface GuardianNodeProps {
@@ -219,6 +221,28 @@ export function GuardianNode({
             {getRoleBadge()}
           </text>
         </g>
+      )}
+
+      {/* Churn Risk Badge */}
+      {guardian.status !== "empty" && guardian.engagement_trend && guardian.engagement_trend !== "stable" && (
+        <foreignObject x={nodeX + 8} y={nodeY - 26} width={24} height={24}>
+          <ChurnRiskBadge
+            trend={guardian.engagement_trend}
+            cusumScore={guardian.cusum_score ?? 0}
+          />
+        </foreignObject>
+      )}
+
+      {/* Fatigue Meter */}
+      {guardian.status !== "empty" && (
+        <foreignObject x={nodeX - 45} y={nodeY + 44} width={90} height={28}>
+          <FatigueMeter
+            annual_donation_count={guardian.annual_donation_count ?? 0}
+            fatigue_ceiling={guardian.fatigue_ceiling ?? 6}
+            is_eligible={guardian.is_eligible !== false}
+            fatigue_rest_until={guardian.fatigue_rest_until ?? null}
+          />
+        </foreignObject>
       )}
     </motion.g>
   );
