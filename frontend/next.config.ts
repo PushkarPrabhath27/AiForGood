@@ -4,7 +4,6 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["msw"],
-  output: "export",
   trailingSlash: true,
   images: {
     unoptimized: true,
