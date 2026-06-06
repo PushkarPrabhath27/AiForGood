@@ -32,7 +32,7 @@ interface AdminSummaryData {
 export default function AdminOverviewPage() {
   const { data: summary, isLoading, error } = useQuery<AdminSummaryData>({
     queryKey: ["admin-summary"],
-    queryFn: () => apiGet<AdminSummaryData>("/api/v1/admin/summary"),
+    queryFn: () => apiGet<AdminSummaryData>("/admin/summary"),
     refetchInterval: 30000, // 30s updates
   });
 

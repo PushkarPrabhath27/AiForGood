@@ -26,7 +26,7 @@ interface DeceasedPatientLog {
 export default function GriefProtocolLogPage() {
   const { data: log = [], isLoading, error } = useQuery<DeceasedPatientLog[]>({
     queryKey: ["grief-protocol-log"],
-    queryFn: () => apiGet<DeceasedPatientLog[]>("/api/v1/admin/grief-protocol"),
+    queryFn: () => apiGet<DeceasedPatientLog[]>("/admin/grief-protocol"),
     refetchInterval: 15000, // Refresh every 15s to catch status change actions immediately
   });
 

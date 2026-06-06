@@ -1,7 +1,7 @@
 // frontend/lib/api-client.ts
 import { fetchAuthSession } from "aws-amplify/auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE_URL = "/api/v1";
 
 async function getAuthHeader(): Promise<Record<string, string>> {
   try {
