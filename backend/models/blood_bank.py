@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import Optional, List
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime
 from models.base import BaseModel
@@ -14,9 +16,9 @@ class BloodBank(BaseModel):
     city: Mapped[str] = mapped_column(String(10), nullable=False)  # HYD, etc.
     lat: Mapped[float] = mapped_column(nullable=False)
     lng: Mapped[float] = mapped_column(nullable=False)
-    api_endpoint: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    api_endpoint: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    last_sync_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    inventory: Mapped[list["Inventory"]] = relationship(
+    inventory: Mapped[List["Inventory"]] = relationship(
         "Inventory", back_populates="bank", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )

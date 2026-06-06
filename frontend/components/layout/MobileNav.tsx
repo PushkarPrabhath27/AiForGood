@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Network } from "lucide-react";
+import { LayoutDashboard, Users, Network, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export interface MobileNavProps {
@@ -31,6 +31,12 @@ export function MobileNav({ className }: MobileNavProps) {
       href: "/dashboard/grid",
       icon: <Network className="w-5 h-5" />,
       active: pathname === "/dashboard/grid",
+    },
+    {
+      label: "ADMIN",
+      href: "/dashboard/admin",
+      icon: <ShieldAlert className="w-5 h-5" />,
+      active: pathname.startsWith("/dashboard/admin"),
     },
   ];
 

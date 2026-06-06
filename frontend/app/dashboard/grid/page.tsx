@@ -13,11 +13,18 @@ import { DEMO } from "@/lib/constants";
 import { Activity, ShieldAlert, Sparkles, Map } from "lucide-react";
 import { toast } from "sonner";
 import type { BloodGroup, TypeCoverage } from "@/../shared/contracts/api.types";
+import { BloodWeatherPanel } from "@/components/grid/BloodWeatherPanel";
+import { CrossPatientDonorPool } from "@/components/grid/CrossPatientDonorPool";
+import { useGuardianCircle } from "@/lib/hooks/useGuardianCircle";
 
 export default function RaktaGridDashboardPage() {
   const cityCode = DEMO.CITY_CODE; // Default HYD
   const { data: response, isLoading, error } = useCityInventory(cityCode);
   const approveMutation = useApproveMatch();
+
+  // Query circle mobilization to determine fallback routing visibility
+  const { data: circleResponse } = useGuardianCircle(DEMO.VIKRAM_ID);
+  const isMobilizationFailed = circleResponse?.data?.mobilization_status === "failed";
 
   // State management for clicked blood bank & active matches
   const [selectedBankId, setSelectedBankId] = React.useState<string | null>(null);
@@ -115,6 +122,9 @@ export default function RaktaGridDashboardPage() {
         
         {/* Left Columns: Map & Health Gauge */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Heatmap Projections */}
+          <BloodWeatherPanel cityCode={cityCode} />
+
           {/* CartoDB Nightwatch Map */}
           <div className="flex-1 min-h-[450px] relative rounded-3xl overflow-hidden border border-slate-850 shadow-2xl">
             <CityBloodMap
@@ -145,6 +155,15 @@ export default function RaktaGridDashboardPage() {
               onApprove={handleMatchClick}
             />
           ))}
+
+          {/* Fallback cross-patient donor pool routing list */}
+          {isMobilizationFailed && (
+            <CrossPatientDonorPool
+              cityCode={cityCode}
+              patientId={DEMO.VIKRAM_ID}
+              patientName="Vikram Reddy"
+            />
+          )}
 
           {activeMatches.length === 0 && (
             <div className="p-5 rounded-3xl bg-slate-900/40 border border-slate-850 flex items-center gap-3">

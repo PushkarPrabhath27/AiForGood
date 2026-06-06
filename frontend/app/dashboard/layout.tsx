@@ -4,6 +4,7 @@ import { TopNav } from "@/components/layout/TopNav";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { SaathiChatbot } from "@/components/shared/SaathiChatbot";
+import { AuthGuard } from "@/components/shared/AuthGuard";
 
 export const metadata: Metadata = {
   title: "RaktaSetu NOOR — Clinical AI Platform",
@@ -16,10 +17,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div
-      className="flex h-screen w-screen overflow-hidden"
-      style={{ background: "var(--bg-void)", color: "var(--text-primary)" }}
-    >
+    <AuthGuard>
+      <div
+        className="flex h-screen w-screen overflow-hidden"
+        style={{ background: "var(--bg-void)", color: "var(--text-primary)" }}
+      >
       {/* Collapsible Sidebar on Desktop */}
       <Sidebar />
 
@@ -47,5 +49,6 @@ export default function DashboardLayout({
       {/* Floating Saathi Chatbot */}
       <SaathiChatbot />
     </div>
+    </AuthGuard>
   );
 }

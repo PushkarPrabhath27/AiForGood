@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Network, ChevronLeft, ChevronRight } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Users, Network, ChevronLeft, ChevronRight, ShieldAlert, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { signOut } from "aws-amplify/auth";
+import { toast } from "sonner";
 
 export interface SidebarProps {
   className?: string;
@@ -13,6 +15,17 @@ export interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+      toast.success("Successfully logged out");
+      router.push("/auth");
+    } catch {
+      toast.error("Failed to sign out");
+    }
+  }
 
   const navItems = [
     {
@@ -32,6 +45,12 @@ export function Sidebar({ className }: SidebarProps) {
       href: "/dashboard/grid",
       icon: <Network className="w-[18px] h-[18px]" />,
       active: pathname === "/dashboard/grid",
+    },
+    {
+      label: "ADMIN",
+      href: "/dashboard/admin",
+      icon: <ShieldAlert className="w-[18px] h-[18px]" />,
+      active: pathname.startsWith("/dashboard/admin"),
     },
   ];
 
@@ -218,6 +237,31 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
           </div>
         )}
+
+        {/* User profile card & Log Out */}
+        <div
+          className={cn(
+            "flex items-center gap-2 px-1 py-1.5 rounded-lg border border-transparent transition-all",
+            !isCollapsed && "bg-[#0a0a10] border-slate-800/40 px-2.5"
+          )}
+        >
+          <div className="w-7 h-7 rounded-full bg-rose-950/40 border border-rose-800/40 flex items-center justify-center text-xs font-bold text-rose-450">
+            <User className="w-3.5 h-3.5" />
+          </div>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-slate-350 truncate">Coordinator</p>
+              <p className="text-[8px] text-slate-500 truncate font-mono">hyd.noor@raktasetu.org</p>
+            </div>
+          )}
+          <button
+            onClick={handleSignOut}
+            title="Sign Out"
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-rose-500/10 text-slate-500 hover:text-rose-450 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {/* Collapse toggle */}
         <button

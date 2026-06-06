@@ -1,3 +1,4 @@
+from __future__ import annotations
 class RaktaSetuException(Exception):
     """Base class for all domain-specific exceptions in RaktaSetu NOOR."""
     status_code: int = 500

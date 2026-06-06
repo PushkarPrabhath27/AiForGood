@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import Optional, List
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Boolean, DateTime
 from models.base import BaseModel
@@ -29,12 +31,12 @@ class Patient(BaseModel):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
 
     # Relationships mapped with selectin loading to prevent N+1 queries in the endpoints
-    hb_readings: Mapped[list["HbReading"]] = relationship(
+    hb_readings: Mapped[List["HbReading"]] = relationship(
         "HbReading", back_populates="patient", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )
-    forecasts: Mapped[list["Forecast"]] = relationship(
+    forecasts: Mapped[List["Forecast"]] = relationship(
         "Forecast", back_populates="patient", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )
-    guardians: Mapped[list["Guardian"]] = relationship(
+    guardians: Mapped[List["Guardian"]] = relationship(
         "Guardian", back_populates="patient", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )

@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, ForeignKey, DateTime
 from models.base import BaseModel
@@ -14,5 +16,5 @@ class Alert(BaseModel):
     severity: Mapped[str] = mapped_column(String(20), nullable=False)  # info, warning, critical
     message: Mapped[str] = mapped_column(String(500), nullable=False)
     recommended_action: Mapped[str] = mapped_column(String(500), nullable=False)
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

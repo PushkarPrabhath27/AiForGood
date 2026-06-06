@@ -77,24 +77,12 @@ export function GuardianConstellation({
   }, []);
 
   const nodes = React.useMemo(() => {
+    const total = guardians.length || 1;
     return guardians.map((g, index) => {
-      let r = 0;
-      let angle = 0;
-      
-      // 3 primary inner (indices 0,1,2), r=110 (scaled down to fit in 600x600 viewBox)
-      // 3 secondary middle (indices 3,4,5), r=180
-      // 2 rare outer (indices 6,7), r=250
-      
-      if (index < 3) {
-        r = 110 * scale;
-        angle = (index * 2 * Math.PI) / 3 - Math.PI / 2;
-      } else if (index < 6) {
-        r = 180 * scale;
-        angle = ((index - 3) * 2 * Math.PI) / 3 - Math.PI / 2 + Math.PI / 3; // offset by 60deg
-      } else {
-        r = 250 * scale;
-        angle = ((index - 6) * 2 * Math.PI) / 2;
-      }
+      // Map all nodes to a constant radius to form a perfect circle
+      const r = 200 * scale;
+      // Divide angles evenly starting from the top (-Math.PI / 2)
+      const angle = (index * 2 * Math.PI) / total - Math.PI / 2;
 
       return {
         guardian: g,
@@ -256,7 +244,7 @@ export function GuardianConstellation({
               }}
               fill="url(#aetherLifeGrad)"
               filter="url(#centerGlow)"
-              style={{ originX: 0, originY: 0 }}
+              style={{ originX: 0.5, originY: 0.5 }}
             />
           </motion.g>
           <text
