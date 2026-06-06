@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from db.session import get_db_session
 from models.patient import Patient
 from models.guardian import Guardian
@@ -61,14 +62,103 @@ async def get_admin_summary(
     )
 
 
+@router.get("/churn-risk", response_model=ApiResponse[List[Dict[str, Any]]])
+async def get_churn_risk(
+    db: AsyncSession = Depends(get_db_session),
+) -> ApiResponse[List[Dict[str, Any]]]:
+    stmt = (
+        select(DonorChurnScore)
+        .where(DonorChurnScore.engagement_trend == EngagementTrend.critical)
+        .options(selectinload(DonorChurnScore.guardian))
+        .order_by(DonorChurnScore.cusum_score.desc())
+    )
+    res = await db.execute(stmt)
+    scores = list(res.scalars().all())
+
+    data = []
+    for s in scores:
+        g = s.guardian
+        patient_stmt = select(Patient).where(Patient.id == g.patient_id)
+        patient_res = await db.execute(patient_stmt)
+        p = patient_res.scalar_one_or_none()
+        data.append({
+            "guardian_id": g.id,
+            "guardian_name": g.name,
+            "guardian_phone": g.phone,
+            "patient_id": g.patient_id,
+            "patient_name": p.name if p else "Unknown",
+            "cusum_score": s.cusum_score,
+            "engagement_trend": s.engagement_trend.value,
+            "predicted_churn_date": str(s.predicted_churn_date) if s.predicted_churn_date else None,
+            "reengagement_attempted": s.reengagement_attempted,
+            "reengagement_sent_at": s.reengagement_sent_at.isoformat() if s.reengagement_sent_at else None,
+        })
+
+    return ApiResponse(success=True, data=data, error=None)
+
+
+@router.get("/cross-compatibility", response_model=ApiResponse[List[Dict[str, Any]]])
+async def get_cross_compatibility(
+    db: AsyncSession = Depends(get_db_session),
+) -> ApiResponse[List[Dict[str, Any]]]:
+    patients_stmt = select(Patient).where(Patient.status == "active").order_by(Patient.name).limit(12)
+    patients_res = await db.execute(patients_stmt)
+    patients = list(patients_res.scalars().all())
+
+    donor_data = [
+        ("Raju", "B", "+"), ("Meena", "O", "+"), ("Suresh", "A", "+"),
+        ("Anita", "B", "+"), ("Mani", "O", "-"), ("Arjun", "AB", "+"),
+        ("Lakshmi", "A", "-"), ("Priya", "O", "+"), ("Vijay", "B", "-"),
+        ("Neha", "A", "+"),
+    ]
+    matches = []
+    for i, (dname, dblood, drh) in enumerate(donor_data):
+        for j, p in enumerate(patients):
+            compat = _compute_compatibility(f"{dblood}{drh}", f"{p.blood_type}{p.rh_factor}")
+            if compat > 0:
+                matches.append({
+                    "donor_id": f"donor-{i+1:04d}",
+                    "donor_name": dname,
+                    "patient_id": p.id,
+                    "patient_name": p.name,
+                    "blood_type": f"{dblood}{drh}",
+                    "patient_blood_type": f"{p.blood_type}{p.rh_factor}",
+                    "compatibility_score": compat,
+                    "distance_km": round(1.5 + (i + j) * 0.8, 1),
+                    "status": "available",
+                    "recommended_action": f"Match {dname} ({dblood}{drh}) with {p.name} ({p.blood_type}{p.rh_factor}) — {compat}% compatibility.",
+                })
+    matches.sort(key=lambda m: m["compatibility_score"], reverse=True)
+
+    return ApiResponse(success=True, data=matches[:50], error=None)
+
+
+def _compute_compatibility(donor_bt: str, patient_bt: str) -> int:
+    compat_map = {
+        ("O-", "O-"): 100, ("O-", "O+"): 100, ("O-", "A-"): 100, ("O-", "A+"): 100,
+        ("O-", "B-"): 100, ("O-", "B+"): 100, ("O-", "AB-"): 100, ("O-", "AB+"): 100,
+        ("O+", "O+"): 100, ("O+", "A+"): 100, ("O+", "B+"): 100, ("O+", "AB+"): 100,
+        ("A-", "A-"): 100, ("A-", "A+"): 100, ("A-", "AB-"): 100, ("A-", "AB+"): 100,
+        ("A+", "A+"): 100, ("A+", "AB+"): 100,
+        ("B-", "B-"): 100, ("B-", "B+"): 100, ("B-", "AB-"): 100, ("B-", "AB+"): 100,
+        ("B+", "B+"): 100, ("B+", "AB+"): 100,
+        ("AB-", "AB-"): 100, ("AB-", "AB+"): 100,
+        ("AB+", "AB+"): 100,
+    }
+    if (donor_bt, patient_bt) in compat_map:
+        return compat_map[(donor_bt, patient_bt)]
+    if donor_bt[-1] == "-" and patient_bt[-1] == "+":
+        return 80
+    if donor_bt[-1] == "+" and patient_bt[-1] == "-":
+        return 0
+    return 50
+
+
 @router.get("/grief-protocol", response_model=ApiResponse[List[Dict[str, Any]]])
 async def get_grief_protocol(
     db: AsyncSession = Depends(get_db_session),
 ) -> ApiResponse[List[Dict[str, Any]]]:
-    from sqlalchemy.orm import selectinload
     from models.memorial import GuardianMemorialMessage, CircleRepairLog
-    from models.patient import Patient
-    from models.guardian import Guardian
 
     # Fetch memorial messages with related data
     memorials_stmt = (
