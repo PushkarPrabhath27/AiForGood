@@ -4,6 +4,6 @@ import type { ApiResponse, ChatbotMessageRequest, ChatbotMessageResponse } from 
 export async function sendChatbotMessage(
   payload: ChatbotMessageRequest
 ): Promise<ApiResponse<ChatbotMessageResponse>> {
-  const response = await apiClient.post<ApiResponse<ChatbotMessageResponse>>("/api/v1/chatbot/message", payload);
+  const response = await apiClient.post<ApiResponse<ChatbotMessageResponse>>("/chatbot/message", payload);
   return response.data;
 }

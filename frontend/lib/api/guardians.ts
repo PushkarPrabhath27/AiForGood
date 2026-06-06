@@ -3,14 +3,14 @@ import type { ApiResponse, GuardianCircleResponse, MobilizationStatusResponse, G
 
 export async function getGuardianCircle(patientId: string): Promise<ApiResponse<GuardianCircleResponse>> {
   const response = await apiClient.get<ApiResponse<GuardianCircleResponse>>(
-    `/api/v1/patients/${patientId}/guardian-circle`
+    `/patients/${patientId}/guardian-circle`
   );
   return response.data;
 }
 
 export async function mobilizeCircle(patientId: string): Promise<ApiResponse<MobilizationStatusResponse>> {
   const response = await apiClient.post<ApiResponse<MobilizationStatusResponse>>(
-    `/api/v1/patients/${patientId}/guardian-circle/mobilize`
+    `/patients/${patientId}/guardian-circle/mobilize`
   );
   return response.data;
 }
@@ -21,7 +21,7 @@ export async function updateGuardian(
   data: { telegram_chat_id?: string; preferred_language?: string }
 ): Promise<ApiResponse<Guardian>> {
   const response = await apiClient.patch<ApiResponse<Guardian>>(
-    `/api/v1/patients/${patientId}/guardians/${guardianId}`,
+    `/patients/${patientId}/guardians/${guardianId}`,
     data
   );
   return response.data;
@@ -33,7 +33,7 @@ export async function sendGuardianMessage(
   message?: string
 ): Promise<ApiResponse<any>> {
   const response = await apiClient.post<ApiResponse<any>>(
-    `/api/v1/patients/${patientId}/guardians/${guardianId}/message`,
+    `/patients/${patientId}/guardians/${guardianId}/message`,
     { message }
   );
   return response.data;

@@ -14,7 +14,7 @@ export async function notifyAlert(
   alertId: string
 ): Promise<ApiResponse<NotifyAlertResponse>> {
   const response = await apiClient.post<ApiResponse<NotifyAlertResponse>>(
-    `/api/v1/patients/${patientId}/alerts/${alertId}/notify`
+    `/patients/${patientId}/alerts/${alertId}/notify`
   );
   return response.data;
 }
