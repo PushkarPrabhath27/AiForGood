@@ -19,6 +19,8 @@ class PatientSchema(BaseModel):
     alloimmunization_flag: bool
     hospital_id: str
     enrolled_at: datetime
+    status: str = "active"
+    adherence_risk: str = "low"
     next_transfusion_predicted: Optional[datetime] = None
     hb_current: Optional[float] = None
 

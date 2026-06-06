@@ -34,6 +34,26 @@ MOBILIZATION_T0: int = 0
 INVENTORY_MATCH_EXPIRY_BUFFER_DAYS: int = 2
 ORTOOLS_SOLVE_TIMEOUT_SECONDS: int = 30
 
+# ── Proactive Mood Check (Telegram) ────────────────────────────────────────────
+MOOD_RISK_MAP: dict[int, float] = {
+    3: 1.0,    # Good / Energetic
+    2: 1.15,   # Okay / Tired
+    1: 1.25,   # Stressed / Depressed
+}
+MOOD_LABELS: dict[int, str] = {
+    3: "Good / Energetic",
+    2: "Okay / Tired",
+    1: "Stressed / Depressed",
+}
+MOOD_EMOJIS: dict[int, str] = {
+    3: "\U0001f60a",  # 😊
+    2: "\U0001f610",  # 😐
+    1: "\U0001f614",  # 😔
+}
+ADHERENCE_RISK_CONSECUTIVE_DAYS: int = 3
+MOOD_RISK_LOOKBACK_DAYS: int = 5
+BASE_HB_DECLIN_RATE: float = 0.1  # g/dL per day (physiological estimate for Prophet path)
+
 # Standard ABO/Rh Blood Compatibility Matrix
 # Key: Patient Blood Group, Value: List of compatible donor blood groups
 COMPATIBILITY_MATRIX: Dict[str, List[str]] = {

@@ -44,6 +44,7 @@ export interface Patient {
   next_transfusion_predicted: string | null; // ISO date
   hb_current: number | null; // g/dL
   status: PatientStatus;
+  adherence_risk: string;
 }
 
 export interface PatientListResponse {
@@ -223,6 +224,29 @@ export interface ChatbotMessageResponse {
   intent?: string;
   context_detected?: Record<string, any>;
   suggestions?: string[];
+}
+
+export interface MoodLog {
+  id: string;
+  patient_id: string;
+  guardian_id: string | null;
+  timestamp: string;
+  mood_score: number;
+  mood_label: string;
+  source: string;
+  telegram_chat_id: string | null;
+  calculated_risk_multiplier: number;
+}
+
+export interface MoodLogListResponse {
+  logs: MoodLog[];
+  total: number;
+}
+
+export interface MoodCheckTriggerResponse {
+  status: string;
+  message: string;
+  chat_id: string | null;
 }
 
 export interface DonorChurnScore {

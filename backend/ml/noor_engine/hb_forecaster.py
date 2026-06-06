@@ -14,7 +14,11 @@ from core.logging import logger
 from models.hb_reading import HbReading
 from schemas.forecast import ForecastPointSchema
 
-def _run_prophet(df: pd.DataFrame, threshold: float) -> tuple[date, date, date, float, list[ForecastPointSchema]]:
+def _run_prophet(
+    df: pd.DataFrame,
+    threshold: float,
+    risk_multiplier: float = 1.0,
+) -> tuple[date, date, date, float, list[ForecastPointSchema]]:
     """
     Synchronous Prophet fit and forecast runner.
     If the Stan backend fails to compile or compile time fails, gracefully falls back
@@ -89,12 +93,50 @@ def _run_prophet(df: pd.DataFrame, threshold: float) -> tuple[date, date, date, 
             confidence_upper = min(last_forecast_date, predicted_transfusion_date + timedelta(days=2))
             
         # Calculate confidence percentage based on reading size
+        # Apply risk multiplier post-hoc adjustment to Prophet forecast
+        if risk_multiplier != 1.0 and forecast_points:
+            logger.info(
+                "risk_multiplier_applied_to_prophet_forecast",
+                risk_multiplier=round(risk_multiplier, 4),
+            )
+            first_date = forecast_points[0].date
+            base_decline = 0.1
+            extra_daily_decline = base_decline * (risk_multiplier - 1.0)
+
+            predicted_transfusion_date = None
+            confidence_lower = None
+            confidence_upper = None
+
+            for pt in forecast_points:
+                days = (pt.date - first_date).days
+                extra_drop = days * extra_daily_decline
+                pt.hb_predicted = round(max(2.0, pt.hb_predicted - extra_drop), 2)
+                pt.ci_lower = round(max(1.5, pt.ci_lower - extra_drop), 2)
+                pt.ci_upper = round(min(15.0, pt.ci_upper - extra_drop), 2)
+
+                if confidence_lower is None and pt.ci_lower <= threshold:
+                    confidence_lower = pt.date
+                if predicted_transfusion_date is None and pt.hb_predicted <= threshold:
+                    predicted_transfusion_date = pt.date
+                if confidence_upper is None and pt.ci_upper <= threshold:
+                    confidence_upper = pt.date
+
+            last_forecast_date = forecast_points[-1].date
+            first_forecast_date = forecast_points[0].date
+
+            if predicted_transfusion_date is None:
+                predicted_transfusion_date = last_forecast_date
+            if confidence_lower is None:
+                confidence_lower = max(first_forecast_date, predicted_transfusion_date - timedelta(days=2))
+            if confidence_upper is None:
+                confidence_upper = min(last_forecast_date, predicted_transfusion_date + timedelta(days=2))
+
         num_readings = len(df)
         if num_readings >= 20:
             confidence_pct = 89.0
         else:
             confidence_pct = round(50.0 + (num_readings / 20.0) * 38.0, 1)
-            
+
         return predicted_transfusion_date, confidence_lower, confidence_upper, confidence_pct, forecast_points
 
     except Exception as exc:
@@ -140,7 +182,17 @@ def _run_prophet(df: pd.DataFrame, threshold: float) -> tuple[date, date, date, 
             latest_date=latest_date.isoformat(),
             latest_hb=latest_hb
         )
-        
+
+        if risk_multiplier != 1.0:
+            original_rate = decay_rate
+            decay_rate = decay_rate * risk_multiplier
+            logger.info(
+                "risk_multiplier_applied_to_decay",
+                original_rate=round(original_rate, 4),
+                risk_multiplier=round(risk_multiplier, 4),
+                adjusted_rate=round(decay_rate, 4),
+            )
+
         forecast_points = []
         predicted_transfusion_date = None
         confidence_lower = None
@@ -202,7 +254,8 @@ def _run_prophet(df: pd.DataFrame, threshold: float) -> tuple[date, date, date, 
 async def generate_forecast(
     patient_id: str,
     readings: List[HbReading],
-    patient_age: int
+    patient_age: int,
+    risk_multiplier: float = 1.0,
 ) -> tuple[date, date, date, float, list[ForecastPointSchema], str] | None:
     """
     Generates univariate hemoglobin time series decay projections using Facebook Prophet
@@ -231,29 +284,57 @@ async def generate_forecast(
     # Priya's Demo Narrative Override (Smart Hackathon Pragmatism)
     # Priya ID: "550e8400-e29b-41d4-a716-446655440001"
     if patient_id == "550e8400-e29b-41d4-a716-446655440001":
-        predicted_date = date(2024, 11, 3)
-        conf_lower = date(2024, 11, 1)
-        conf_upper = date(2024, 11, 5)
+        threshold = HB_TRANSFUSION_THRESHOLD
         conf_pct = 89.0
-        
+
         forecast_points = []
         latest_date = date(2024, 10, 20)
         # Physiological linear decay matching cyclical sawtooth from peak of 10.5 down to 7.0
         start_val = 10.5
         decay_rate = 0.25
+        if risk_multiplier != 1.0:
+            logger.info(
+                "risk_multiplier_applied_to_priya_override",
+                original_rate=0.25,
+                risk_multiplier=round(risk_multiplier, 4),
+                adjusted_rate=round(0.25 * risk_multiplier, 4),
+            )
+            decay_rate = 0.25 * risk_multiplier
+
+        predicted_date: date | None = None
+        conf_lower: date | None = None
+        conf_upper: date | None = None
+
         for day in range(1, 61):
             curr_date = latest_date + timedelta(days=day)
             hb_pred = max(2.0, start_val - (day * decay_rate))
             ci_spread = 0.4 + (day * 0.02)
+            ci_lower = max(1.5, hb_pred - ci_spread)
+            ci_upper = min(15.0, hb_pred + ci_spread)
             forecast_points.append(
                 ForecastPointSchema(
                     date=curr_date,
                     hb_predicted=round(hb_pred, 2),
-                    ci_lower=round(max(1.5, hb_pred - ci_spread), 2),
-                    ci_upper=round(min(15.0, hb_pred + ci_spread), 2)
+                    ci_lower=round(ci_lower, 2),
+                    ci_upper=round(ci_upper, 2)
                 )
             )
-            
+            if conf_lower is None and ci_lower <= threshold:
+                conf_lower = curr_date
+            if predicted_date is None and hb_pred <= threshold:
+                predicted_date = curr_date
+            if conf_upper is None and ci_upper <= threshold:
+                conf_upper = curr_date
+
+        last_fc_date = latest_date + timedelta(days=60)
+        first_fc_date = latest_date + timedelta(days=1)
+        if predicted_date is None:
+            predicted_date = last_fc_date
+        if conf_lower is None:
+            conf_lower = max(first_fc_date, predicted_date - timedelta(days=2))
+        if conf_upper is None:
+            conf_upper = min(last_fc_date, predicted_date + timedelta(days=2))
+
         # Perform async Redis caching update to simulate actual Prophet cache saves
         redis_client = aioredis.from_url(settings.redis_url, socket_timeout=2.0)
         try:
@@ -301,7 +382,7 @@ async def generate_forecast(
     
     try:
         predicted_date, conf_lower, conf_upper, conf_pct, forecast_points = await loop.run_in_executor(
-            None, _run_prophet, df, threshold
+            None, _run_prophet, df, threshold, risk_multiplier
         )
         
         # Cache successfully generated result to Redis

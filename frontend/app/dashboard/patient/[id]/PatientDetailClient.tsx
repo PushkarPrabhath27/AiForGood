@@ -13,6 +13,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { AlertBanner } from "@/components/shared/AlertBanner";
 import { SentinelPanel } from "@/components/sentinel/SentinelPanel";
 import { PatientStatusPanel } from "@/components/patient/PatientStatusPanel";
+import { MoodCheckPanel } from "@/components/mood/MoodCheckPanel";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { PatientDetail, ForecastResponse } from "@/../shared/contracts/api.types";
@@ -133,6 +134,9 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
         nextTransfusion={forecast?.predicted_transfusion_date ?? null}
         confidencePct={forecast?.confidence_pct ?? null}
       />
+
+      {/* Proactive Mood Check via Telegram */}
+      <MoodCheckPanel patientId={patient.id} patientName={patient.name} />
 
       {forecastUnavailable ? (
         <AlertBanner

@@ -8,12 +8,14 @@ from sqlalchemy import select
 import redis.asyncio as aioredis
 
 from core.config import settings
+from core.constants import MOOD_RISK_LOOKBACK_DAYS
 from core.exceptions import PatientNotFoundError, InsufficientDataError, ForecastError
 from core.logging import logger
 from db.session import get_db_session
 from models.patient import Patient
 from models.hb_reading import HbReading
 from models.forecast import Forecast
+from models.mood_log import MoodLog
 from schemas.common import ApiResponse, ApiError
 from schemas.forecast import ForecastResponse, HbReadingSchema, ForecastPointSchema, AlertFlagSchema
 from ml.noor_engine.hb_forecaster import generate_forecast
@@ -118,9 +120,32 @@ async def get_patient_forecast(
             for p in cached_payload["forecast_points"]
         ]
     else:
+        # Compute risk multiplier from recent mood logs
+        mood_stmt = (
+            select(MoodLog)
+            .where(MoodLog.patient_id == patient_id)
+            .order_by(MoodLog.timestamp.desc())
+            .limit(MOOD_RISK_LOOKBACK_DAYS)
+        )
+        mood_res = await db.execute(mood_stmt)
+        recent_moods = list(mood_res.scalars().all())
+        risk_multiplier = 1.0
+        if recent_moods:
+            risk_multiplier = sum(
+                m.calculated_risk_multiplier for m in recent_moods
+            ) / len(recent_moods)
+        logger.info(
+            "forecast_risk_multiplier_computed",
+            patient_id=patient_id,
+            risk_multiplier=round(risk_multiplier, 4),
+            mood_logs_count=len(recent_moods),
+        )
+
         # Cache Miss: Generate fresh forecast using Prophet
         logger.info("forecast_cache_miss_generating", patient_id=patient_id)
-        forecast_res = await generate_forecast(patient_id, sorted_readings, patient.age)
+        forecast_res = await generate_forecast(
+            patient_id, sorted_readings, patient.age, risk_multiplier=risk_multiplier
+        )
         
         if not forecast_res:
             raise ForecastError("Forecasting failed unexpectedly.")

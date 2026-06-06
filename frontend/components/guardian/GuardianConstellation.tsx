@@ -186,6 +186,7 @@ export function GuardianConstellation({
               x2={node.x}
               y2={node.y}
               stroke={isActiveRay ? "#06B6D4" : "#EC4899"}
+              initial={{ strokeWidth: 1.2, opacity: isActiveRay ? 0.35 : 0.25 }}
               animate={{
                 strokeWidth: isSureshRay && triggerCelebration ? [2, 5, 2] : 1.2,
                 opacity: isSureshRay && triggerCelebration ? [0.3, 0.85, 0.3] : isActiveRay ? 0.35 : 0.25,
@@ -309,7 +310,7 @@ export function GuardianConstellation({
                 <motion.g
                   initial={{ scale: 1 }}
                   animate={{ scale: [1, 1.5, 1] }}
-                  transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
                 >
                   <GuardianNode
                     guardian={node.guardian}

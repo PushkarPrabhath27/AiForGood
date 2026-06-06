@@ -19,6 +19,7 @@ from models.alert import Alert
 from models.engagement import DonorEngagementSignal, DonorChurnScore
 from models.sentinel import CaregiverCheckin, SentinelAlert
 from models.memorial import GuardianMemorialMessage, CircleRepairLog
+from models.mood_log import MoodLog
 from models.weather import BloodWeatherForecast
 
 # this is the Alembic Config object, which provides

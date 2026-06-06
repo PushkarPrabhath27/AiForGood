@@ -25,6 +25,11 @@ class GuardianSchema(BaseModel):
     compatibility_score: int
     reliability_score: int
     geography_score: int
+    cusum_score: Optional[float] = None
+    engagement_trend: Optional[str] = None
+    annual_donation_count: Optional[int] = None
+    fatigue_ceiling: Optional[int] = None
+    fatigue_rest_until: Optional[date] = None
 
     @field_serializer("phone_last4")
     def serialize_phone(self, val: str) -> str:

@@ -10,7 +10,7 @@ from core.config import settings
 from core.exceptions import PatientNotFoundError, GuardianCircleError
 from core.logging import logger
 from db.session import get_db_session
-from models.engagement import DonorChurnScore
+from models.engagement import DonorChurnScore, EngagementTrend
 from models.patient import Patient
 from models.guardian import Guardian
 from schemas.common import ApiResponse, ApiError
@@ -66,6 +66,12 @@ async def get_patient_guardian_circle(
     # 4. Read mobilization state
     mob_status = await get_mobilization_status(patient_id)
     
+    # Fetch churn scores for all guardians in this circle
+    guardian_ids = [g.id for g in guardians]
+    churn_stmt = select(DonorChurnScore).where(DonorChurnScore.guardian_id.in_(guardian_ids))
+    churn_res = await db.execute(churn_stmt)
+    churn_scores = {cs.guardian_id: cs for cs in churn_res.scalars().all()}
+
     # Map to schema structures
     mapped_guardians = [
         GuardianSchema(
@@ -83,7 +89,12 @@ async def get_patient_guardian_circle(
             preferred_language=g.preferred_language,
             compatibility_score=g.compatibility_score,
             reliability_score=g.reliability_score,
-            geography_score=g.geography_score
+            geography_score=g.geography_score,
+            cusum_score=churn_scores[g.id].cusum_score if g.id in churn_scores else None,
+            engagement_trend=churn_scores[g.id].engagement_trend.value if g.id in churn_scores else None,
+            annual_donation_count=g.annual_donation_count,
+            fatigue_ceiling=g.fatigue_ceiling,
+            fatigue_rest_until=g.fatigue_rest_until,
         )
         for g in guardians
     ]

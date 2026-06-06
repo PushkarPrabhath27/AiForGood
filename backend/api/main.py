@@ -94,7 +94,7 @@ app.include_router(health.router, prefix="/health", tags=["System Diagnostics"])
 
 # Register API v1 sub-routers
 from fastapi import APIRouter
-from api.routers import grid, alerts, chatbot, patients, messaging, sentinel, weather, grief, fatigue, guardians_direct, admin, graph
+from api.routers import grid, alerts, chatbot, patients, messaging, sentinel, weather, grief, fatigue, guardians_direct, admin, graph, mood
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patients.router, prefix="/patients", tags=["Patients Directory"])
 api_router.include_router(forecasts.router, prefix="/patients", tags=["Forecasting"])
@@ -115,6 +115,7 @@ api_router.include_router(weather.router)
 api_router.include_router(guardians_direct.router)
 api_router.include_router(admin.router)
 api_router.include_router(graph.router)
+api_router.include_router(mood.router)
 app.include_router(api_router)
 
 @app.post("/api/v1/reset-demo")

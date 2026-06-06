@@ -25,6 +25,7 @@ class Patient(BaseModel):
     alloimmunization_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hospital_id: Mapped[str] = mapped_column(String(50), nullable=False)
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    adherence_risk: Mapped[str] = mapped_column(String(10), default="low", nullable=False)
     
     next_transfusion_predicted: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     hb_current: Mapped[float | None] = mapped_column(nullable=True)

@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["msw"],
   trailingSlash: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:8001/api/:path*",
+      },
+    ];
+  },
   images: {
     unoptimized: true,
   },
