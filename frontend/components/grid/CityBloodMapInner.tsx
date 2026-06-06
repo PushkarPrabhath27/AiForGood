@@ -158,14 +158,6 @@ export function CityBloodMapInner({
     cleanStaleLeafletIds();
 
     return () => {
-      if (mapRef.current) {
-        try {
-          mapRef.current.remove();
-        } catch (e) {
-          console.warn("[Leaflet Map Clean Up Warn]:", e);
-        }
-        mapRef.current = null;
-      }
       cleanStaleLeafletIds();
     };
   }, []);
@@ -183,7 +175,11 @@ export function CityBloodMapInner({
         zoom={12}
         className="w-full h-full min-h-[400px] z-10"
         zoomControl={true}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
+        dragging={true}
+        doubleClickZoom={true}
+        touchZoom={true}
+        keyboard={true}
       >
         <MapInstanceTracker mapRef={mapRef} />
         <TileLayer

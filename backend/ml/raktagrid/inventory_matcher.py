@@ -101,6 +101,27 @@ def optimize_matches(
     if reference_date is None:
         reference_date = datetime(2024, 10, 20, 10, 0, 0)
 
+    # Harmonize timezone between reference_date and database datetimes to prevent TypeError
+    db_tz = None
+    for item in inventory:
+        u_exp = getattr(item, "expiry_date", None)
+        if u_exp is not None and u_exp.tzinfo is not None:
+            db_tz = u_exp.tzinfo
+            break
+    if db_tz is None:
+        for p in patients:
+            p_pred = getattr(p, "next_transfusion_predicted", None)
+            if p_pred is not None and p_pred.tzinfo is not None:
+                db_tz = p_pred.tzinfo
+                break
+
+    if db_tz is not None:
+        if reference_date.tzinfo is None:
+            reference_date = reference_date.replace(tzinfo=db_tz)
+    else:
+        if reference_date.tzinfo is not None:
+            reference_date = reference_date.replace(tzinfo=None)
+
     # 2. Map Blood Banks for fast O(1) lat/lng lookups
     bank_map: Dict[str, Any] = {str(bank.id): bank for bank in banks}
 

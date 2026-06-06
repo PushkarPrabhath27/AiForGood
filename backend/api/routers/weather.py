@@ -42,6 +42,10 @@ async def get_city_forecast(
     - **week_start**: ISO date for the forecast week start (optional).
     """
     res = await get_weather_forecast(city_code.upper(), db, week_start)
+    if not res:
+        await generate_blood_weather_forecast(db)
+        res = await get_weather_forecast(city_code.upper(), db, week_start)
+        
     return ApiResponse(
         success=True,
         data=res,

@@ -107,28 +107,46 @@ async def get_city_grid(
         bg = f"{item.blood_type}{item.rh_factor}"
         inv_summary[bg] = inv_summary.get(bg, 0) + item.units_available
 
-    # 6. Apply Smart Hackathon Pragmatism for Hyderabad (HYD) demo slide compliance
+    # 6. Apply dynamic health score based on solver results
     city_health_score = int(coverage_pct)
-    if city_code_upper == "HYD":
-        city_health_score = 72
 
-    # Determine overall status
+    # Determine overall status dynamically
     health_status_val = "green" if coverage_pct >= 80 else ("yellow" if coverage_pct >= 50 else "red")
-    if city_code_upper == "HYD":
-        health_status_val = "yellow"  # Hyderabad override slide fidelity
 
     # Map database bank models to the response schemas
-    mapped_banks = [
-        BloodBankNodeSchema(
-            id=str(b.id),
-            name=b.name,
-            city=b.city,
-            lat=b.lat,
-            lng=b.lng,
-            last_sync_at=b.last_sync_at
+    mapped_banks = []
+    for b in banks:
+        # Compute inventory_summary for this bank
+        bank_inv = [item for item in inventory if item.bank_id == b.id]
+        inv_sum = {}
+        for item in bank_inv:
+            bg = f"{item.blood_type}{item.rh_factor}"
+            inv_sum[bg] = inv_sum.get(bg, 0) + item.units_available
+        
+        # Calculate bank status based on stock levels (green if total units >= 5, yellow >= 2, red otherwise)
+        total_units = sum(item.units_available for item in bank_inv)
+        bank_status = "green" if total_units >= 5 else ("yellow" if total_units >= 2 else "red")
+        
+        # Determine if stale (last_sync_at older than 24 hours or None)
+        is_stale = True
+        if b.last_sync_at is not None:
+            time_diff = datetime.utcnow() - b.last_sync_at.replace(tzinfo=None)
+            if time_diff.total_seconds() < 86400: # 24 hours
+                is_stale = False
+        
+        mapped_banks.append(
+            BloodBankNodeSchema(
+                id=str(b.id),
+                name=b.name,
+                city=b.city,
+                lat=b.lat,
+                lng=b.lng,
+                status=bank_status,
+                inventory_summary=inv_sum,
+                is_stale=is_stale,
+                last_sync_at=b.last_sync_at
+            )
         )
-        for b in banks
-    ]
 
     mapped_matches = []
     for m in matches:
@@ -143,6 +161,13 @@ async def get_city_grid(
         # Standard combined group
         blood_grp = f"{m['blood_type']}{m['rh_factor']}"
         
+        # Find matching inventory item to retrieve actual units available
+        matching_inv_item = next((item for item in inventory if str(item.id) == m["unit_id"]), None)
+        units_avail = matching_inv_item.units_available if matching_inv_item else 1
+        
+        # Determine if extended phenotype match was required
+        has_phenotype_match = m.get("extended_phenotype_match", True)
+        
         mapped_matches.append(
             InventoryMatchSchema(
                 id=m["unit_id"],
@@ -151,8 +176,8 @@ async def get_city_grid(
                 bank_id=m["bank_id"],
                 bank_name=m["bank_name"],
                 blood_group=blood_grp,
-                extended_phenotype_match=True,  # Matches phenotype-compatible units when required
-                units_available=2,  # Seeded B+ Kell-negative units count at Apollo
+                extended_phenotype_match=has_phenotype_match,
+                units_available=units_avail,
                 expiry_date=expiry_date_val,
                 days_until_expiry=max(0, days_until),
                 urgency=urgency_val,

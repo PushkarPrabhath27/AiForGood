@@ -12,6 +12,9 @@ class BloodBankNodeSchema(BaseModel):
     city: str
     lat: float
     lng: float
+    status: Literal["green", "yellow", "red"] = "green"
+    inventory_summary: Dict[str, int] = Field(default_factory=dict)
+    is_stale: bool = False
     last_sync_at: datetime | None = None
 
 class TypeCoverageSchema(BaseModel):

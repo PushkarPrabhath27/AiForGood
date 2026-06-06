@@ -26,26 +26,18 @@ export function Providers({ children }: ProvidersProps) {
   const [mocksReady, setMocksReady] = React.useState(false);
 
   React.useEffect(() => {
-    // Dynamic import to avoid bundling msw browser chunks on server builds
-    async function startMocks() {
-      if (
-        process.env.NODE_ENV === "development" &&
-        (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").includes("localhost")
-      ) {
-        try {
-          const { initMocks } = await import("@/lib/mocks/browser");
-          // Prevent MSW registration from hanging the UI indefinitely
-          await Promise.race([
-            initMocks(),
-            new Promise((resolve) => setTimeout(resolve, 800)),
-          ]);
-        } catch (error) {
-          console.error("[MSW] Mock initialization error:", error);
-        }
+    // Dynamically initialize mock worker if conditions match
+    const loadMocks = async () => {
+      try {
+        const { initMocks } = await import("@/lib/mocks/browser");
+        await initMocks();
+      } catch (err) {
+        console.error("Failed to initialize MSW conditional mock worker:", err);
+      } finally {
+        setMocksReady(true);
       }
-      setMocksReady(true);
-    }
-    startMocks();
+    };
+    loadMocks();
   }, []);
 
   if (!mocksReady) {

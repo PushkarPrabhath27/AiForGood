@@ -27,6 +27,7 @@ const nextConfig: NextConfig = {
   // For Next.js 15/16+ standard turbopack config
   // @ts-ignore
   turbopack: {
+    root: path.resolve(process.cwd()),
     resolveAlias: {
       "msw/browser": {
         browser: "./node_modules/msw/lib/browser/index.mjs",
