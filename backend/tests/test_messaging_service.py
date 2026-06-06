@@ -17,12 +17,8 @@ from services.messaging_service import generate_guardian_message, send_telegram_
 # ── Gemini message generation ──────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_generate_message_uses_gemini():
-    """Verify generate_guardian_message invokes the Google Gemini SDK and caches the result.
-
-    Mocks the google-genai Client, asserts the prompt is dispatched with the
-    correct API key, and verifies the returned text matches the mocked response.
-    """
+async def test_generate_message_uses_bedrock():
+    """Verify generate_guardian_message invokes invoke_bedrock_converse and caches the result."""
     patient = Patient(name="Priya", hospital_id="Apollo Hospital")
     guardian = Guardian(
         id="test-g-id",
@@ -32,35 +28,19 @@ async def test_generate_message_uses_gemini():
     )
     context = {"date": "2024-11-03", "time": "10:00 AM"}
 
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_gemini_resp = MagicMock()
-    mock_gemini_resp.text = "Hello Suresh, Priya's transfusion is on 2024-11-03. Can you confirm?"
-    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_gemini_resp)
+    mock_resp = "Hello Suresh, Priya's transfusion is on 2024-11-03. Can you confirm?"
 
-    with patch("services.messaging_service.genai.Client", return_value=mock_client) as mock_cls, \
-         patch("services.messaging_service.settings") as mock_settings:
-
-        mock_settings.gemini_api_key = "fake-gemini-key"
-        mock_settings.gemini_model = "gemini-2.5-flash-preview-05-20"
-        mock_settings.redis_url = settings.redis_url
-
+    with patch("services.messaging_service.invoke_bedrock_converse", AsyncMock(return_value=mock_resp)) as mock_invoke:
         msg = await generate_guardian_message(guardian, patient, "t10_soft_ask", context)
 
         assert "Hello Suresh" in msg
         assert "Priya" in msg
-        mock_cls.assert_called_once_with(api_key="fake-gemini-key")
-        mock_client.aio.models.generate_content.assert_called_once()
+        mock_invoke.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_generate_message_fallback_on_gemini_failure():
-    """Verify generate_guardian_message gracefully falls back to localized templates.
-
-    Tests two failure modes:
-    - Missing API key → immediate template render.
-    - Gemini raises an exception → template render after caught exception.
-    """
+async def test_generate_message_fallback_on_bedrock_failure():
+    """Verify generate_guardian_message gracefully falls back to localized templates on Bedrock failure."""
     patient = Patient(name="Priya", hospital_id="Apollo Hospital")
     guardian = Guardian(
         id="test-g-id-fallback",
@@ -70,28 +50,8 @@ async def test_generate_message_fallback_on_gemini_failure():
     )
     context = {"date": "2024-11-03", "hospital": "Apollo Hospital", "time": "10:00 AM"}
 
-    # Case A: Missing API key
-    with patch("services.messaging_service.settings") as mock_settings:
-        mock_settings.gemini_api_key = ""
-        mock_settings.redis_url = settings.redis_url
-
-        msg = await generate_guardian_message(guardian, patient, "t10_soft_ask", context)
-        assert "నమస్తే Suresh గారు" in msg
-
-    # Case B: Gemini API raises an error
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.aio.models.generate_content = AsyncMock(
-        side_effect=Exception("API Server Error")
-    )
-
-    with patch("services.messaging_service.genai.Client", return_value=mock_client), \
-         patch("services.messaging_service.settings") as mock_settings:
-
-        mock_settings.gemini_api_key = "fake-key"
-        mock_settings.gemini_model = "gemini-2.5-flash-preview-05-20"
-        mock_settings.redis_url = settings.redis_url
-
+    # Case: Bedrock API raises an error
+    with patch("services.messaging_service.invoke_bedrock_converse", AsyncMock(side_effect=Exception("Bedrock API Error"))):
         msg = await generate_guardian_message(guardian, patient, "t10_soft_ask", context)
         assert "నమస్తే Suresh గారు" in msg
 
@@ -177,19 +137,10 @@ async def test_send_telegram_with_inline_buttons():
 
 @pytest.mark.asyncio
 async def test_saathi_chatbot_intent_matching():
-    """Test POST /api/v1/chatbot/message returns a Gemini-enriched Hb reply for Priya."""
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_gemini_resp = MagicMock()
-    mock_gemini_resp.text = "Hello, I am Saathi. Priya's current hemoglobin is 7.2 g/dL."
-    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_gemini_resp)
+    """Test POST /api/v1/chatbot/message returns a Bedrock-enriched Hb reply for Priya."""
+    mock_resp = "Hello, I am Saathi. Priya's current hemoglobin is 7.2 g/dL."
 
-    with patch("api.routers.chatbot.genai.Client", return_value=mock_client), \
-         patch("api.routers.chatbot.settings") as mock_settings:
-
-        mock_settings.gemini_api_key = "fake-gemini-key"
-        mock_settings.gemini_model = "gemini-2.5-flash-preview-05-20"
-
+    with patch("api.routers.chatbot.invoke_bedrock_converse", AsyncMock(return_value=mock_resp)) as mock_invoke:
         from fastapi.testclient import TestClient
         with TestClient(app) as client:
             req = {"message": "Show me Priya's hemoglobin level", "language": "en"}
@@ -199,6 +150,7 @@ async def test_saathi_chatbot_intent_matching():
             assert payload["success"] is True
             assert "hemoglobin" in payload["data"]["reply"].lower()
             assert payload["data"]["context_retrieved"]["patient_name"] == "Priya"
+            mock_invoke.assert_called_once()
 
 
 # ── Alert notification ─────────────────────────────────────────────────────────

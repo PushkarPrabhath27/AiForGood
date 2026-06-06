@@ -1,5 +1,11 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load .env files explicitly to populate os.environ for boto3 and other SDKs
+_BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(_BASE_DIR / ".env")
 
 class Settings(BaseSettings):
     """
@@ -52,3 +58,13 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+# Global Monkeypatch to intercept redis.asyncio and fallback to MockRedis
+try:
+    import redis.asyncio as aioredis
+    from core.redis_mock import MockRedis
+    aioredis.from_url = MockRedis.from_url
+except Exception as patch_err:
+    import sys
+    print(f"Warning: Failed to patch redis.asyncio: {str(patch_err)}", file=sys.stderr)
+

@@ -66,6 +66,48 @@ async def run_bank_sync_job() -> None:
             logger.error("background_job_failed", job_name="bank_sync", error=str(err))
 
 
+async def run_donor_churn_job() -> None:
+    """Trigger CUSUM churn scan across all guardians (Innovation 1: Living Circle)."""
+    logger.info("background_job_triggered", job_name="donor_churn")
+    from workers.donor_churn_worker import run_donor_churn_worker
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            res = await run_donor_churn_worker(session)
+            logger.info("background_job_completed", job_name="donor_churn", result=res)
+        except Exception as err:
+            logger.error("background_job_failed", job_name="donor_churn", error=str(err))
+
+
+async def run_blood_weather_job() -> None:
+    """Generate weekly blood weather demand-supply forecasts (Innovation 6)."""
+    logger.info("background_job_triggered", job_name="blood_weather")
+    from services.blood_weather_service import generate_blood_weather_forecast
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            res = await generate_blood_weather_forecast(session)
+            logger.info("background_job_completed", job_name="blood_weather", result=res)
+        except Exception as err:
+            logger.error("background_job_failed", job_name="blood_weather", error=str(err))
+
+
+async def run_fatigue_lift_job() -> None:
+    """Lift expired fatigue rest periods for eligible guardians (Innovation 4)."""
+    logger.info("background_job_triggered", job_name="fatigue_lift")
+    from services.fatigue_service import lift_expired_fatigue_rests
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            res = await lift_expired_fatigue_rests(session)
+            logger.info("background_job_completed", job_name="fatigue_lift", result=res)
+        except Exception as err:
+            logger.error("background_job_failed", job_name="fatigue_lift", error=str(err))
+
+
 def start_scheduler() -> None:
     """
     Initializes and starts the periodic scheduler engine.
@@ -102,6 +144,30 @@ def start_scheduler() -> None:
         run_bank_sync_job,
         trigger=IntervalTrigger(hours=1),
         id="bank_sync_job",
+        replace_existing=True
+    )
+
+    # 5. Register CUSUM donor churn scan every 6 hours (Innovation 1: Living Circle)
+    scheduler.add_job(
+        run_donor_churn_job,
+        trigger=IntervalTrigger(hours=6),
+        id="donor_churn_job",
+        replace_existing=True
+    )
+
+    # 6. Register blood weather forecast daily at 03:00 AM (Innovation 6)
+    scheduler.add_job(
+        run_blood_weather_job,
+        trigger=CronTrigger(hour=3, minute=0),
+        id="blood_weather_job",
+        replace_existing=True
+    )
+
+    # 7. Lift expired fatigue rests daily at 01:00 AM (Innovation 4)
+    scheduler.add_job(
+        run_fatigue_lift_job,
+        trigger=CronTrigger(hour=1, minute=0),
+        id="fatigue_lift_job",
         replace_existing=True
     )
 

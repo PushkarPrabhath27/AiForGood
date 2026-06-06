@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, Integer, DateTime, CheckConstraint
+from sqlalchemy import String, ForeignKey, Integer, DateTime, CheckConstraint, Date, Boolean
 from models.base import BaseModel
 
 class Guardian(BaseModel):
@@ -35,5 +35,11 @@ class Guardian(BaseModel):
     compatibility_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     reliability_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     geography_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Donor Fatigue Tracking
+    annual_donation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    fatigue_ceiling: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
+    fatigue_rest_until: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    fatigue_notified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     patient: Mapped["Patient"] = relationship("Patient", back_populates="guardians")

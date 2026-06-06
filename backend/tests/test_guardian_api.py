@@ -161,3 +161,29 @@ async def test_message_guardian_api():
             updated_suresh = next(g for g in circle_check.json()["data"]["guardians"] if g["id"] == suresh_id)
             assert updated_suresh["status"] == "pending"
 
+
+@pytest.mark.asyncio
+async def test_get_guardian_churn_score_api():
+    """
+    Verifies that calling GET /api/v1/patients/{patient_id}/guardians/{guardian_id}/churn-score
+    returns the churn score metrics for the guardian.
+    """
+    priya_id = "550e8400-e29b-41d4-a716-446655440001"
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # First get Suresh's ID
+        circle_res = await client.get(f"/api/v1/patients/{priya_id}/guardian-circle")
+        assert circle_res.status_code == 200
+        guardians = circle_res.json()["data"]["guardians"]
+        suresh = next(g for g in guardians if g["name"] == "Suresh")
+        suresh_id = suresh["id"]
+
+        # Call churn score endpoint
+        score_res = await client.get(f"/api/v1/patients/{priya_id}/guardians/{suresh_id}/churn-score")
+        assert score_res.status_code == 200
+        payload = score_res.json()
+        assert payload["guardian_id"] == suresh_id
+        assert "cusum_score" in payload
+        assert "engagement_trend" in payload
+
+

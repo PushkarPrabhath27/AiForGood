@@ -22,5 +22,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend codebase
 COPY . .
 
-# Execute database migrations and start FastAPI server
-CMD alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port $PORT
+# Execute database migrations then start FastAPI server on port 8080 (App Runner default)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

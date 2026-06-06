@@ -16,6 +16,10 @@ from models.guardian import Guardian
 from models.blood_bank import BloodBank
 from models.inventory import Inventory
 from models.alert import Alert
+from models.engagement import DonorEngagementSignal, DonorChurnScore
+from models.sentinel import CaregiverCheckin, SentinelAlert
+from models.memorial import GuardianMemorialMessage, CircleRepairLog
+from models.weather import BloodWeatherForecast
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

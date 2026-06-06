@@ -26,6 +26,7 @@ class Patient(BaseModel):
     
     next_transfusion_predicted: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     hb_current: Mapped[float | None] = mapped_column(nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
 
     # Relationships mapped with selectin loading to prevent N+1 queries in the endpoints
     hb_readings: Mapped[list["HbReading"]] = relationship(

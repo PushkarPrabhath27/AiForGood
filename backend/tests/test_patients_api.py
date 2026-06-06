@@ -108,3 +108,29 @@ async def test_log_hb_reading():
         detail_res = await client.get(f"/api/v1/patients/{priya_id}")
         assert detail_res.status_code == 200
         assert detail_res.json()["data"]["hb_current"] == 9.2
+
+
+@pytest.mark.asyncio
+async def test_update_patient_status_api():
+    """
+    Verifies that calling POST /api/v1/patients/{patient_id}/status updates patient status
+    and handles validation of invalid states correctly.
+    """
+    priya_id = "550e8400-e29b-41d4-a716-446655440001"
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Update status to active
+        res_active = await client.post(
+            f"/api/v1/patients/{priya_id}/status",
+            json={"status": "active"}
+        )
+        assert res_active.status_code == 200
+        assert res_active.json()["new_status"] == "active"
+
+        # 2. Update status to an invalid value
+        res_invalid = await client.post(
+            f"/api/v1/patients/{priya_id}/status",
+            json={"status": "invalid_state"}
+        )
+        assert res_invalid.status_code == 422
+

@@ -3,8 +3,7 @@ import json
 from typing import Dict, Any, Optional, List
 import redis.asyncio as aioredis
 import httpx
-from google import genai
-from google.genai import types
+from services.bedrock_service import invoke_bedrock_converse
 
 from core.config import settings
 from core.exceptions import MessagingError
@@ -134,15 +133,7 @@ async def generate_guardian_message(
     }
     rendered_fallback = fallback_template.format(**tpl_vars)
 
-    if not settings.gemini_api_key:
-        logger.info(
-            "gemini_key_missing_using_template_fallback",
-            guardian_id=guardian.id,
-            message_type=message_type,
-        )
-        return rendered_fallback
-
-    # 3. Generate via Google Gemini SDK ────────────────────────────────────────
+    # 3. Generate via AWS Bedrock Converse SDK ─────────────────────────────────
     system_prompt = (
         "You are a compassionate clinical coordinator for RaktaSetu NOOR, a Thalassemia care "
         "platform. Write brief, warm, personalised messages to blood donors who are guardians "
@@ -161,46 +152,40 @@ async def generate_guardian_message(
     )
 
     try:
-        async with genai.Client(api_key=settings.gemini_api_key) as client:
-            response = await client.aio.models.generate_content(
-                model=settings.gemini_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=GEMINI_TEMPERATURE,
-                    max_output_tokens=MAX_TOKENS,
-                ),
-            )
-            generated_text = (response.text or "").strip()
-            if not generated_text:
-                raise ValueError("Empty response text returned from Gemini API")
+        generated_text = await invoke_bedrock_converse(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            max_tokens=MAX_TOKENS,
+            temperature=GEMINI_TEMPERATURE
+        )
+        generated_text = generated_text.strip()
+        
+        # Strip accidental surrounding double-quotes
+        if generated_text.startswith('"') and generated_text.endswith('"'):
+            generated_text = generated_text[1:-1].strip()
 
-            # Strip accidental surrounding double-quotes
-            if generated_text.startswith('"') and generated_text.endswith('"'):
-                generated_text = generated_text[1:-1].strip()
+        # Cache the result
+        redis_client2 = aioredis.from_url(
+            settings.redis_url, socket_timeout=REDIS_SOCKET_TIMEOUT
+        )
+        try:
+            await redis_client2.setex(cache_key, MESSAGE_CACHE_TTL, generated_text)
+            logger.info("guardian_message_cached_successfully", guardian_id=guardian.id)
+        except Exception as redis_err:
+            logger.warning("message_cache_write_failed", error=str(redis_err))
+        finally:
+            await redis_client2.aclose()
 
-            # Cache the result
-            redis_client2 = aioredis.from_url(
-                settings.redis_url, socket_timeout=REDIS_SOCKET_TIMEOUT
-            )
-            try:
-                await redis_client2.setex(cache_key, MESSAGE_CACHE_TTL, generated_text)
-                logger.info("guardian_message_cached_successfully", guardian_id=guardian.id)
-            except Exception as redis_err:
-                logger.warning("message_cache_write_failed", error=str(redis_err))
-            finally:
-                await redis_client2.aclose()
-
-            logger.info(
-                "guardian_message_generated_via_gemini",
-                guardian_id=guardian.id,
-                message_type=message_type,
-            )
-            return generated_text
+        logger.info(
+            "guardian_message_generated_via_bedrock",
+            guardian_id=guardian.id,
+            message_type=message_type,
+        )
+        return generated_text
 
     except Exception as err:
         logger.warning(
-            "gemini_generation_failed_falling_back_to_template",
+            "bedrock_generation_failed_falling_back_to_template",
             guardian_id=guardian.id,
             message_type=message_type,
             error=str(err),

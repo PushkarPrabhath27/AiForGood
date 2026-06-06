@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, date
 import json
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -175,3 +175,78 @@ async def log_hb_reading(
         data=db_reading,
         error=None
     )
+
+
+from pydantic import BaseModel  # noqa: E402
+
+
+class PatientStatusUpdate(BaseModel):
+    """Request body for patient status update."""
+
+    status: str
+    transition_patient_id: Optional[str] = None
+
+
+@router.post(
+    "/{patient_id}/status",
+    response_model=Dict[str, Any],
+    tags=["Patients Directory"],
+    summary="Update patient status (deceased triggers Grief Protocol)",
+)
+async def update_patient_status(
+    patient_id: str,
+    body: PatientStatusUpdate,
+    db: AsyncSession = Depends(get_db_session),
+) -> Dict[str, Any]:
+    """Update the clinical status of a patient.
+
+    Allowed status values: `active`, `critical`, `stable`, `deceased`.
+
+    If `status` is set to `deceased`, the Grief Protocol (Innovation 5) is
+    automatically activated — generating per-guardian memorial messages and
+    creating a circle_repair_log entry.
+
+    - **patient_id**: UUID of the patient.
+    - **transition_patient_id**: Optional UUID of a new patient to suggest for
+      guardian circle transition (grief protocol only).
+    """
+    allowed = {"active", "critical", "stable", "deceased"}
+    if body.status not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status '{body.status}'. Must be one of: {sorted(allowed)}",
+        )
+
+    stmt = select(Patient).where(Patient.id == patient_id)
+    res = await db.execute(stmt)
+    patient = res.scalar_one_or_none()
+    if patient is None:
+        raise PatientNotFoundError(f"Patient with ID {patient_id} does not exist.")
+
+    if body.status == "deceased":
+        # Delegate to the full grief protocol
+        from services.grief_service import activate_grief_protocol
+        result = await activate_grief_protocol(
+            patient_id=patient_id,
+            db=db,
+            transition_patient_id=body.transition_patient_id,
+        )
+        return {"status": "deceased", "grief_protocol": result}
+
+    # Simple status update for non-deceased transitions
+    old_status = patient.status
+    patient.status = body.status
+    db.add(patient)
+    await db.flush()
+
+    logger.info(
+        "patient_status_updated",
+        patient_id=patient_id,
+        old_status=old_status,
+        new_status=body.status,
+    )
+    return {
+        "patient_id": patient_id,
+        "old_status": old_status,
+        "new_status": body.status,
+    }

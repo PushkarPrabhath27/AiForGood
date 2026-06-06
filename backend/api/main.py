@@ -94,7 +94,7 @@ app.include_router(health.router, prefix="/health", tags=["System Diagnostics"])
 
 # Register API v1 sub-routers
 from fastapi import APIRouter
-from api.routers import grid, alerts, chatbot, patients, messaging
+from api.routers import grid, alerts, chatbot, patients, messaging, sentinel, weather, grief, fatigue
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patients.router, prefix="/patients", tags=["Patients Directory"])
 api_router.include_router(forecasts.router, prefix="/patients", tags=["Forecasting"])
@@ -103,6 +103,14 @@ api_router.include_router(alerts.router, prefix="/patients", tags=["Alerts"])
 api_router.include_router(grid.router, prefix="/grid", tags=["RaktaGrid Optimization"])
 api_router.include_router(chatbot.router, tags=["Saathi Chatbot"])
 api_router.include_router(messaging.router, tags=["WhatsApp Webhook"])
+# Innovation 3: Caregiver Sentinel
+api_router.include_router(sentinel.router)
+# Innovation 4: Donor Fatigue
+api_router.include_router(fatigue.router)
+# Innovation 5: Grief Protocol
+api_router.include_router(grief.router)
+# Innovation 6: Blood Weather
+api_router.include_router(weather.router)
 app.include_router(api_router)
 
 @app.get("/")

@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta
 import json
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from core.config import settings
 from core.exceptions import PatientNotFoundError, GuardianCircleError
 from core.logging import logger
 from db.session import get_db_session
+from models.engagement import DonorChurnScore
 from models.patient import Patient
 from models.guardian import Guardian
 from schemas.common import ApiResponse, ApiError
@@ -306,3 +307,61 @@ async def message_patient_guardian(
         ),
         error=None
     )
+
+
+@router.get(
+    "/{patient_id}/guardians/{guardian_id}/churn-score",
+    response_model=Dict[str, Any],
+    tags=["Living Circle — Churn Detection"],
+    summary="Get CUSUM churn score for a guardian",
+)
+async def get_guardian_churn_score(
+    patient_id: str,
+    guardian_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> Dict[str, Any]:
+    """Return the current CUSUM engagement churn score and trend classification
+    for a specific guardian in a patient's circle.
+
+    - **cusum_score**: Normalised CUSUM value [0.0 – 1.0]; higher = more at-risk.
+    - **engagement_trend**: `stable` | `declining` | `critical`
+    - **predicted_churn_date**: ISO date if trend is critical, else null.
+    - **reengagement_attempted**: Whether a re-engagement nudge was sent.
+    """
+    # Validate guardian belongs to this patient
+    g_stmt = select(Guardian).where(
+        Guardian.id == guardian_id,
+        Guardian.patient_id == patient_id,
+    )
+    g_res = await db.execute(g_stmt)
+    guardian = g_res.scalar_one_or_none()
+    if guardian is None:
+        raise HTTPException(status_code=404, detail="Guardian not found for this patient.")
+
+    # Fetch churn score row
+    cs_stmt = select(DonorChurnScore).where(DonorChurnScore.guardian_id == guardian_id)
+    cs_res = await db.execute(cs_stmt)
+    score_row = cs_res.scalar_one_or_none()
+
+    if score_row is None:
+        # No churn scan has run yet — return baseline stable state
+        return {
+            "guardian_id": guardian_id,
+            "patient_id": patient_id,
+            "cusum_score": 0.0,
+            "engagement_trend": "stable",
+            "predicted_churn_date": None,
+            "reengagement_attempted": False,
+            "reengagement_sent_at": None,
+            "note": "No churn scan has run yet. Trigger the donor_churn_job or wait for the 6-hour scheduler.",
+        }
+
+    return {
+        "guardian_id": guardian_id,
+        "patient_id": patient_id,
+        "cusum_score": score_row.cusum_score,
+        "engagement_trend": score_row.engagement_trend.value,
+        "predicted_churn_date": str(score_row.predicted_churn_date) if score_row.predicted_churn_date else None,
+        "reengagement_attempted": score_row.reengagement_attempted,
+        "reengagement_sent_at": score_row.reengagement_sent_at.isoformat() if score_row.reengagement_sent_at else None,
+    }

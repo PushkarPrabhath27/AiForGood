@@ -1,0 +1,6 @@
+# Dev-only dependencies (not included in the production Docker image)
+-r requirements.txt
+pytest==8.2.2
+pytest-asyncio==0.23.7
+pytest-cov==5.0.0
+httpx==0.28.1

@@ -8,16 +8,24 @@ sessions directly.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
-
-import pytest
 
 # Ensure `backend/` is on sys.path so every test module can import `api`,
 # `db`, `models`, etc. without a package prefix.
 _BACKEND = Path(__file__).resolve().parent.parent   # …/AIforgood/backend
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
+
+# Force test environment variables before importing settings
+os.environ["APP_ENV"] = "test"
+# Use absolute path for test SQLite database to avoid CWD mismatches
+test_db_path = _BACKEND / "raktasetu_test.db"
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{test_db_path.as_posix()}"
+os.environ["DATABASE_URL_SYNC"] = f"sqlite:///{test_db_path.as_posix()}"
+
+import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -46,6 +54,10 @@ def initialise_database():
     import models.blood_bank     # noqa: F401
     import models.inventory      # noqa: F401
     import models.alert          # noqa: F401
+    import models.engagement     # noqa: F401
+    import models.sentinel       # noqa: F401
+    import models.memorial       # noqa: F401
+    import models.weather        # noqa: F401
 
     sync_engine = create_engine(settings.database_url_sync, future=True)
 
