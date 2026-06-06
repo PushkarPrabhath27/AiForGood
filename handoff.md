@@ -53,9 +53,12 @@ This file serves as the single source of truth for tracking project execution st
   - [x] `workers/scheduler.py` updated with 3 new jobs (donor_churn, blood_weather, fatigue_lift)
   - [x] `api/main.py` updated with 4 new router registrations
   - [x] All 39 tests still passing
-- [ ] **Phase 7: Cloud Deployment & Final E2E Verification**
-  - [ ] Create `backend/apprunner.yaml` (0.5 vCPU / 1 GB memory)
-  - [ ] Deploy FastAPI backend to AWS App Runner
+- [/] **Phase 7: Cloud Deployment & Final E2E Verification**
+  - [x] Create `backend/apprunner.yaml` (0.5 vCPU / 1 GB memory)
+  - [x] Integrate ECR build-tag-push and test suite into GitHub Actions workflow
+  - [x] Programmatically inject AWS credentials into GitHub Secrets
+  - [x] Push to main -> GitHub Actions tests pass, builds image, and pushes to Amazon ECR successfully!
+  - [ ] Deploy FastAPI backend to AWS App Runner (Pending manual console creation due to IAM PassRole restrictions)
   - [ ] Run end-to-end dry run matching the revised demo narrative
   - [ ] Verify CloudWatch metric publishing
 
@@ -69,19 +72,30 @@ This file serves as the single source of truth for tracking project execution st
 * **DynamoDB Table Name:** `DonorCompatibilityEdges`
 * **RDS Hostname:** `raktasetu-db.covwwscw4pp0.us-east-1.rds.amazonaws.com`
 * **Secrets Manager Secret Name:** `raktasetu/db-password`
+* **ECR Registry/Repository:** `235130525598.dkr.ecr.us-east-1.amazonaws.com/raktasetu-noor:latest`
 
 ---
 
 ## 4. Next Steps
 
-1. **Initiate Phase 7 (Cloud Deployment):**
-   * Create `backend/apprunner.yaml` with `0.5 vCPU / 1 GB` instance, `BUILD` phase (`pip install -r requirements.txt`), and `RUN` phase (`uvicorn api.main:app --host 0.0.0.0 --port 8080`)
-   * Push to AWS App Runner from the CLI or GitHub Actions
-   * Verify all 6 innovation API routes respond correctly on the deployed URL
-   * Run the demo dry-run: Priya T-14 → Sentinel check-in → guardian mobilization → blood weather for HYD
+1. **Create App Runner Service via AWS Console:**
+   Because the `noor-dev-admin` IAM user lacks `iam:PassRole` permissions, please create the service manually in the console:
+   - Go to: https://us-east-1.console.aws.amazon.com/apprunner/home#/create
+   - Select **Amazon ECR** container registry.
+   - Enter Image URI: `235130525598.dkr.ecr.us-east-1.amazonaws.com/raktasetu-noor:latest`
+   - Set Deployment Trigger to **Automatic**.
+   - Create a new service role for ECR Access (`AppRunnerECRAccessRole`).
+   - Use `0.5 vCPU` and `1 GB` memory.
+   - Set Port to `8080` and Health check path to `/health`.
+   - Copy and paste the environment variables listed in [walkthrough.md](file:///C:/Users/pushk/.gemini/antigravity/brain/8a2e05fc-2567-4b07-9a1f-32650c9d83d0/walkthrough.md).
 
-2. **Key Venv / Command to run anything:**
+2. **Verify live endpoints & run E2E demo:**
+   - Once deployed, hit `https://<your-app-runner-url>/health` to confirm `{"status":"ok"}`.
+   - Run the validation test suite or manual smoke steps (e.g., Priya T-14 sentinel check-in, weather predictions, fatigueCeiling verification) on the live URL.
+
+3. **Key Venv / Command to run anything:**
    ```
    C:\Users\pushk\OneDrive\Documents\AIforgood\.venv\Scripts\python.exe -m <module>
    ```
    Run from: `C:\Users\pushk\OneDrive\Documents\AIforgood\backend`
+
