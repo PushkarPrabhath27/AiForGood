@@ -53,7 +53,7 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
     );
   }
 
-  if (isError || !patientResponse?.data || !forecastResponse?.data) {
+  if (isError || !patientResponse?.data) {
     const errMsg =
       (patientError as any)?.message ||
       (forecastError as any)?.message ||
@@ -73,7 +73,9 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
   }
 
   const patient = patientResponse.data as PatientDetail;
-  const forecast = forecastResponse.data as ForecastResponse;
+  const forecast = forecastResponse?.data as ForecastResponse | null;
+
+  const forecastUnavailable = !forecast?.predicted_transfusion_date;
 
   return (
     <div className="space-y-6">
@@ -128,25 +130,35 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
       <PatientHeader
         patient={patient}
         currentHb={patient.hb_current}
-        nextTransfusion={forecast.predicted_transfusion_date}
-        confidencePct={forecast.confidence_pct}
+        nextTransfusion={forecast?.predicted_transfusion_date ?? null}
+        confidencePct={forecast?.confidence_pct ?? null}
       />
 
-      {/* Pulsing countdown summary card */}
-      <ForecastSummary
-        predictedDate={forecast.predicted_transfusion_date}
-        confidenceLower={forecast.confidence_lower}
-        confidenceUpper={forecast.confidence_upper}
-        confidencePct={forecast.confidence_pct}
-      />
+      {forecastUnavailable ? (
+        <AlertBanner
+          variant="info"
+          title="Insufficient Data for Forecasting"
+          message="At least 3 Hb readings are required to generate a forecast. Log a new reading to start building the prediction model."
+        />
+      ) : (
+        <>
+          {/* Pulsing countdown summary card */}
+          <ForecastSummary
+            predictedDate={forecast!.predicted_transfusion_date}
+            confidenceLower={forecast!.confidence_lower}
+            confidenceUpper={forecast!.confidence_upper}
+            confidencePct={forecast!.confidence_pct}
+          />
 
-      {/* Large Recharts sawtooth graph */}
-      <HbForecastChart
-        historical={forecast.historical_readings}
-        forecast={forecast.forecast_points}
-        threshold={7.0}
-        predictedDate={forecast.predicted_transfusion_date}
-      />
+          {/* Large Recharts sawtooth graph */}
+          <HbForecastChart
+            historical={forecast!.historical_readings}
+            forecast={forecast!.forecast_points}
+            threshold={7.0}
+            predictedDate={forecast!.predicted_transfusion_date}
+          />
+        </>
+      )}
 
       {/* Expandable Alert panels and Cycle ledgers side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -155,7 +167,7 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">
             System Diagnostics
           </h3>
-          <ClinicalAlerts alerts={forecast.alert_flags} />
+          <ClinicalAlerts alerts={forecast?.alert_flags ?? []} />
           <SentinelPanel patientId={patient.id} />
         </div>
 
@@ -164,7 +176,7 @@ export function PatientDetailClient({ id }: PatientDetailClientProps) {
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">
             Transfusion Archive
           </h3>
-          <TransfusionTimeline readings={forecast.historical_readings} />
+          <TransfusionTimeline readings={forecast?.historical_readings ?? []} />
         </div>
       </div>
     </div>

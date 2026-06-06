@@ -13,7 +13,7 @@ class GuardianSchema(BaseModel):
     id: str
     patient_id: str
     name: str
-    phone_last4: str = Field(..., alias="phone")  # RENAME from phone but deserialize from phone model attribute
+    phone_last4: str = Field(..., validation_alias="phone")  # serialize as phone_last4, populate from phone attribute
     telegram_chat_id: Optional[str] = None
     role: Literal["primary", "secondary", "rare_specialist"]
     status: Literal["active", "cooldown", "pending", "unavailable", "empty"]
