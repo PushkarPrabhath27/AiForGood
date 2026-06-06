@@ -190,6 +190,18 @@ async def trigger_reengagement_if_needed(
             "Your past donations have made a real difference. Please let us know if you're available."
         )
 
+    # Dispatch the message via Telegram if chat_id exists
+    if guardian.telegram_chat_id:
+        try:
+            from services.messaging_service import send_telegram_message
+            await send_telegram_message(
+                chat_id=guardian.telegram_chat_id,
+                message=message_text
+            )
+            logger.info("reengagement_telegram_sent", guardian_id=guardian.id)
+        except Exception as msg_err:
+            logger.error("reengagement_telegram_failed", guardian_id=guardian.id, error=str(msg_err))
+
     # Log the attempt — actual sending is handled by the Telegram messaging service
     score_row.reengagement_attempted = True
     score_row.reengagement_sent_at = datetime.utcnow()

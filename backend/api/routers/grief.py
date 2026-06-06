@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db_session
 from models.memorial import CircleRepairLog
 from services.grief_service import activate_grief_protocol, get_memorial_messages
+from schemas.common import ApiResponse
 
 router = APIRouter(prefix="/grief", tags=["Grief Protocol"])
 
@@ -33,7 +34,7 @@ class GriefActivationRequest(BaseModel):
 
 @router.post(
     "/activate/{patient_id}",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     status_code=status.HTTP_201_CREATED,
     summary="Activate grief protocol for a deceased patient",
 )
@@ -41,7 +42,7 @@ async def activate_grief(
     patient_id: str,
     body: GriefActivationRequest,
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Mark a patient as deceased, generate memorial messages for all guardians,
     and create a circle repair log entry.
 
@@ -55,33 +56,42 @@ async def activate_grief(
             db=db,
             transition_patient_id=body.transition_patient_id,
         )
-        return result
+        return ApiResponse(
+            success=True,
+            data=result,
+            error=None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @router.get(
     "/memorials/{patient_id}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="Retrieve memorial messages for a patient's circle",
 )
 async def get_memorials(
     patient_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return all generated memorial messages for the guardian circle of a patient."""
-    return await get_memorial_messages(patient_id, db)
+    res = await get_memorial_messages(patient_id, db)
+    return ApiResponse(
+        success=True,
+        data=res,
+        error=None
+    )
 
 
 @router.get(
     "/repair-logs/{patient_id}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="Retrieve circle repair log entries for a patient",
 )
 async def get_repair_logs(
     patient_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return all CircleRepairLog entries for a patient."""
     stmt = (
         select(CircleRepairLog)
@@ -90,7 +100,7 @@ async def get_repair_logs(
     )
     res = await db.execute(stmt)
     logs = list(res.scalars().all())
-    return [
+    data = [
         {
             "id": log.id,
             "patient_id": log.patient_id,
@@ -103,3 +113,8 @@ async def get_repair_logs(
         }
         for log in logs
     ]
+    return ApiResponse(
+        success=True,
+        data=data,
+        error=None
+    )

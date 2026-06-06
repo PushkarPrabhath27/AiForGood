@@ -94,7 +94,7 @@ app.include_router(health.router, prefix="/health", tags=["System Diagnostics"])
 
 # Register API v1 sub-routers
 from fastapi import APIRouter
-from api.routers import grid, alerts, chatbot, patients, messaging, sentinel, weather, grief, fatigue
+from api.routers import grid, alerts, chatbot, patients, messaging, sentinel, weather, grief, fatigue, guardians_direct
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patients.router, prefix="/patients", tags=["Patients Directory"])
 api_router.include_router(forecasts.router, prefix="/patients", tags=["Forecasting"])
@@ -111,6 +111,8 @@ api_router.include_router(fatigue.router)
 api_router.include_router(grief.router)
 # Innovation 6: Blood Weather
 api_router.include_router(weather.router)
+# Guardians Direct Actions (Nudges, etc.)
+api_router.include_router(guardians_direct.router)
 app.include_router(api_router)
 
 @app.get("/")

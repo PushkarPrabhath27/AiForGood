@@ -189,7 +189,7 @@ class PatientStatusUpdate(BaseModel):
 
 @router.post(
     "/{patient_id}/status",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     tags=["Patients Directory"],
     summary="Update patient status (deceased triggers Grief Protocol)",
 )
@@ -197,7 +197,7 @@ async def update_patient_status(
     patient_id: str,
     body: PatientStatusUpdate,
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Update the clinical status of a patient.
 
     Allowed status values: `active`, `critical`, `stable`, `deceased`.
@@ -231,7 +231,11 @@ async def update_patient_status(
             db=db,
             transition_patient_id=body.transition_patient_id,
         )
-        return {"status": "deceased", "grief_protocol": result}
+        return ApiResponse(
+            success=True,
+            data={"status": "deceased", "grief_protocol": result},
+            error=None
+        )
 
     # Simple status update for non-deceased transitions
     old_status = patient.status
@@ -245,8 +249,12 @@ async def update_patient_status(
         old_status=old_status,
         new_status=body.status,
     )
-    return {
-        "patient_id": patient_id,
-        "old_status": old_status,
-        "new_status": body.status,
-    }
+    return ApiResponse(
+        success=True,
+        data={
+            "patient_id": patient_id,
+            "old_status": old_status,
+            "new_status": body.status,
+        },
+        error=None
+    )

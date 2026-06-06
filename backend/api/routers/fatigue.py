@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db_session
 from models.guardian import Guardian
 from services.fatigue_service import get_fatigue_status, is_fatigue_eligible, record_donation
+from schemas.common import ApiResponse
 
 router = APIRouter(prefix="/fatigue", tags=["Donor Fatigue"])
 
@@ -31,50 +32,60 @@ class RecordDonationRequest(BaseModel):
 
 @router.get(
     "/{guardian_id}",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     summary="Get fatigue status for a guardian",
 )
 async def fatigue_status(
     guardian_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Return the current donation fatigue eligibility state for a guardian."""
     try:
-        return await get_fatigue_status(guardian_id, db)
+        res = await get_fatigue_status(guardian_id, db)
+        return ApiResponse(
+            success=True,
+            data=res,
+            error=None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.post(
     "/record-donation",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     status_code=status.HTTP_200_OK,
     summary="Record a completed donation and check fatigue ceiling",
 )
 async def record_completed_donation(
     body: RecordDonationRequest,
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Record a donation, increment annual_donation_count, and enforce fatigue ceiling.
 
     If the ceiling is hit, sets fatigue_rest_until and updates the DynamoDB
     compatibility edge to ineligible.
     """
     try:
-        return await record_donation(body.guardian_id, body.patient_id, db)
+        res = await record_donation(body.guardian_id, body.patient_id, db)
+        return ApiResponse(
+            success=True,
+            data=res,
+            error=None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get(
     "/eligible/{patient_id}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="List fatigue-eligible guardians for a patient",
 )
 async def eligible_guardians(
     patient_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return all guardians for a patient who pass the fatigue eligibility check."""
     stmt = select(Guardian).where(
         Guardian.patient_id == patient_id,
@@ -83,7 +94,7 @@ async def eligible_guardians(
     res = await db.execute(stmt)
     guardians = list(res.scalars().all())
 
-    return [
+    data = [
         {
             "guardian_id": g.id,
             "name": g.name,
@@ -95,3 +106,8 @@ async def eligible_guardians(
         }
         for g in guardians
     ]
+    return ApiResponse(
+        success=True,
+        data=data,
+        error=None
+    )

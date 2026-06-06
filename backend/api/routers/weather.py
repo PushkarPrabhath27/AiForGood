@@ -18,20 +18,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db_session
 from models.weather import BloodWeatherForecast
 from services.blood_weather_service import generate_blood_weather_forecast, get_weather_forecast
+from schemas.common import ApiResponse
 
 router = APIRouter(prefix="/weather", tags=["Blood Weather"])
 
 
 @router.get(
     "/{city_code}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="Get blood weather forecast for a city",
 )
 async def get_city_forecast(
     city_code: str,
     week_start: date = Query(default=None, description="Forecast week start (defaults to today)"),
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return the weekly blood supply-demand gap forecast for a city.
 
     Results are sorted by severity (critical first). If no forecast exists
@@ -40,36 +41,50 @@ async def get_city_forecast(
     - **city_code**: 3-letter city code (e.g. 'HYD', 'MUM').
     - **week_start**: ISO date for the forecast week start (optional).
     """
-    return await get_weather_forecast(city_code.upper(), db, week_start)
+    res = await get_weather_forecast(city_code.upper(), db, week_start)
+    return ApiResponse(
+        success=True,
+        data=res,
+        error=None
+    )
 
 
 @router.post(
     "/generate",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     status_code=status.HTTP_202_ACCEPTED,
     summary="Trigger blood weather forecast generation",
 )
 async def trigger_forecast_generation(
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Run an on-demand blood weather forecast for all cities and blood types.
 
     Derives city codes from patient hospital_id prefixes and computes demand
     from next_transfusion_predicted windows. Supply is read from inventory.
     """
     result = await generate_blood_weather_forecast(db)
-    return result
+    return ApiResponse(
+        success=True,
+        data=result,
+        error=None
+    )
 
 
 @router.get(
     "/",
-    response_model=List[str],
+    response_model=ApiResponse[List[str]],
     summary="List city codes with available forecasts",
 )
 async def list_forecast_cities(
     db: AsyncSession = Depends(get_db_session),
-) -> List[str]:
+) -> ApiResponse[List[str]]:
     """Return distinct city codes that have blood weather forecast data."""
     stmt = select(func.distinct(BloodWeatherForecast.city_code))
     res = await db.execute(stmt)
-    return sorted(list(res.scalars().all()))
+    cities = sorted(list(res.scalars().all()))
+    return ApiResponse(
+        success=True,
+        data=cities,
+        error=None
+    )

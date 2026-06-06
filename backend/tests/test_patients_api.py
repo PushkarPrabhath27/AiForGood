@@ -125,7 +125,7 @@ async def test_update_patient_status_api():
             json={"status": "active"}
         )
         assert res_active.status_code == 200
-        assert res_active.json()["new_status"] == "active"
+        assert res_active.json()["data"]["new_status"] == "active"
 
         # 2. Update status to an invalid value
         res_invalid = await client.post(

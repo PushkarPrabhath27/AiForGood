@@ -8,7 +8,8 @@ Exposes endpoints for:
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db_session
 from models.sentinel import CaregiverCheckin, SentinelAlert
 from services.sentinel_service import process_checkin
+from schemas.common import ApiResponse
 
 router = APIRouter(prefix="/sentinel", tags=["Caregiver Sentinel"])
 
@@ -30,9 +32,31 @@ class CheckinRequest(BaseModel):
     channel: str = Field(default="telegram", max_length=20)
 
 
+class CaregiverCheckinSchema(BaseModel):
+    id: str
+    patient_id: str
+    checkin_date: datetime
+    channel: str
+    raw_response: Optional[str] = None
+    symptom_score: float
+    fatigue_reported: bool
+    appetite_normal: bool
+    activity_level: str
+    caregiver_concern_level: str
+    language_detected: str
+
+
+class SentinelStatusSchema(BaseModel):
+    patient_id: str
+    sentinel_score: int
+    last_checkin: Optional[CaregiverCheckinSchema] = None
+    alert_active: bool
+    recommended_action: Optional[str] = None
+
+
 @router.post(
     "/checkin/{patient_id}",
-    response_model=Dict[str, Any],
+    response_model=ApiResponse[Dict[str, Any]],
     status_code=status.HTTP_201_CREATED,
     summary="Process a caregiver check-in response",
 )
@@ -40,7 +64,7 @@ async def caregiver_checkin(
     patient_id: str,
     body: CheckinRequest,
     db: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> ApiResponse[Dict[str, Any]]:
     """Parse a free-text caregiver response, compute symptom + Hb deviation scores,
     and create a SentinelAlert if concern level >= mild.
 
@@ -55,20 +79,24 @@ async def caregiver_checkin(
             channel=body.channel,
             db=db,
         )
-        return result
+        return ApiResponse(
+            success=True,
+            data=result,
+            error=None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get(
     "/alerts/{patient_id}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="List sentinel alerts for a patient",
 )
 async def list_sentinel_alerts(
     patient_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return all SentinelAlerts for a patient, most recent first."""
     stmt = (
         select(SentinelAlert)
@@ -77,7 +105,7 @@ async def list_sentinel_alerts(
     )
     res = await db.execute(stmt)
     alerts = list(res.scalars().all())
-    return [
+    data = [
         {
             "id": a.id,
             "alert_type": a.alert_type,
@@ -91,17 +119,22 @@ async def list_sentinel_alerts(
         }
         for a in alerts
     ]
+    return ApiResponse(
+        success=True,
+        data=data,
+        error=None
+    )
 
 
 @router.get(
     "/checkins/{patient_id}",
-    response_model=List[Dict[str, Any]],
+    response_model=ApiResponse[List[Dict[str, Any]]],
     summary="List caregiver check-in history for a patient",
 )
 async def list_checkins(
     patient_id: str,
     db: AsyncSession = Depends(get_db_session),
-) -> List[Dict[str, Any]]:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """Return all CaregiverCheckins for a patient, most recent first."""
     stmt = (
         select(CaregiverCheckin)
@@ -110,7 +143,7 @@ async def list_checkins(
     )
     res = await db.execute(stmt)
     checkins = list(res.scalars().all())
-    return [
+    data = [
         {
             "id": c.id,
             "checkin_date": c.checkin_date.isoformat(),
@@ -125,3 +158,91 @@ async def list_checkins(
         }
         for c in checkins
     ]
+    return ApiResponse(
+        success=True,
+        data=data,
+        error=None
+    )
+
+
+@router.get(
+    "/{patient_id}",
+    response_model=ApiResponse[SentinelStatusSchema],
+    summary="Get combined Caregiver Sentinel status for a patient",
+)
+async def get_sentinel_status(
+    patient_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> ApiResponse[SentinelStatusSchema]:
+    """Get the latest caregiver checkin details, sentinel score and active alert status."""
+    # 1. Fetch latest caregiver checkin
+    checkin_stmt = (
+        select(CaregiverCheckin)
+        .where(CaregiverCheckin.patient_id == patient_id)
+        .order_by(CaregiverCheckin.checkin_date.desc())
+        .limit(1)
+    )
+    c_res = await db.execute(checkin_stmt)
+    latest_checkin = c_res.scalar_one_or_none()
+
+    if not latest_checkin:
+        return ApiResponse(
+            success=True,
+            data=SentinelStatusSchema(
+                patient_id=patient_id,
+                sentinel_score=0,
+                last_checkin=None,
+                alert_active=False,
+                recommended_action=None,
+            ),
+            error=None
+        )
+
+    # 2. Check concern level for alert state
+    from models.sentinel import ConcernLevel
+    alert_active = latest_checkin.caregiver_concern_level in (ConcernLevel.mild, ConcernLevel.high)
+
+    # 3. Retrieve recommended action if active
+    recommended_action = None
+    if alert_active:
+        alert_stmt = (
+            select(SentinelAlert)
+            .where(
+                SentinelAlert.patient_id == patient_id,
+                SentinelAlert.triggering_checkin_id == latest_checkin.id
+            )
+            .limit(1)
+        )
+        a_res = await db.execute(alert_stmt)
+        latest_alert = a_res.scalar_one_or_none()
+        if latest_alert:
+            recommended_action = latest_alert.recommended_action
+
+    # Map to schema
+    checkin_schema = CaregiverCheckinSchema(
+        id=latest_checkin.id,
+        patient_id=latest_checkin.patient_id,
+        checkin_date=latest_checkin.checkin_date,
+        channel=latest_checkin.channel,
+        raw_response=latest_checkin.raw_response,
+        symptom_score=latest_checkin.symptom_score,
+        fatigue_reported=latest_checkin.fatigue_reported,
+        appetite_normal=latest_checkin.appetite_normal,
+        activity_level=latest_checkin.activity_level.value,
+        caregiver_concern_level=latest_checkin.caregiver_concern_level.value,
+        language_detected=latest_checkin.language_detected,
+    )
+
+    status_data = SentinelStatusSchema(
+        patient_id=patient_id,
+        sentinel_score=round(latest_checkin.symptom_score * 100),
+        last_checkin=checkin_schema,
+        alert_active=alert_active,
+        recommended_action=recommended_action,
+    )
+
+    return ApiResponse(
+        success=True,
+        data=status_data,
+        error=None
+    )

@@ -187,3 +187,33 @@ async def test_get_guardian_churn_score_api():
         assert "engagement_trend" in payload
 
 
+@pytest.mark.asyncio
+async def test_manual_reengage_guardian_api():
+    """
+    Verifies that calling POST /api/v1/guardians/{guardian_id}/reengage
+    triggers a re-engagement nudge and returns an ApiResponse.
+    """
+    priya_id = "550e8400-e29b-41d4-a716-446655440001"
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Get Suresh's ID
+        circle_res = await client.get(f"/api/v1/patients/{priya_id}/guardian-circle")
+        suresh = next(g for g in circle_res.json()["data"]["guardians"] if g["name"] == "Suresh")
+        suresh_id = suresh["id"]
+
+        # Call re-engage endpoint
+        from unittest.mock import patch
+        with patch("services.donor_churn_service.generate_message") as mock_gen, \
+             patch("services.messaging_service.settings") as mock_settings:
+            mock_gen.return_value = "Test manual nudge message."
+            mock_settings.telegram_bot_token = ""  # Force mock mode
+            mock_settings.telegram_chat_id = "test-chat-id"
+
+            res = await client.post(f"/api/v1/guardians/{suresh_id}/reengage")
+            assert res.status_code == 200
+            payload = res.json()
+            assert payload["success"] is True
+            assert payload["data"]["dispatched"] is True
+            assert "Re-engagement nudge successfully generated" in payload["data"]["message"]
+
+
