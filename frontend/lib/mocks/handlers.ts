@@ -437,6 +437,89 @@ export const handlers = [
     });
   }),
 
+  // Admin churn risk - at-risk guardians
+  http.get("*/api/v1/admin/churn-risk", () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          guardian_id: "guardian_venkatesh_001",
+          guardian_name: "Venkatesh Rao",
+          guardian_phone: "+91-9876543210",
+          patient_name: "Priya Sharma",
+          patient_id: DEMO.PRIYA_ID,
+          cusum_score: 0.72,
+          engagement_trend: "critical",
+          predicted_churn_date: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(), // 14 days from now
+          reengagement_attempted: false,
+          reengagement_sent_at: null,
+          last_response_latency_hours: 9.4,
+          donation_count: 6,
+          blood_type: "B+",
+        },
+        {
+          guardian_id: "guardian_suresh_002",
+          guardian_name: "Suresh Kumar",
+          guardian_phone: "+91-9845012345",
+          patient_name: "Arjun Mehta",
+          patient_id: "patient_arjun_001",
+          cusum_score: 0.65,
+          engagement_trend: "warning",
+          predicted_churn_date: new Date(Date.now() + 21 * 24 * 3600 * 1000).toISOString(), // 21 days from now
+          reengagement_attempted: false,
+          reengagement_sent_at: null,
+          last_response_latency_hours: 6.2,
+          donation_count: 4,
+          blood_type: "O+",
+        },
+      ],
+      error: null,
+    });
+  }),
+
+  // Admin cross-compatibility matches
+  http.get("*/api/v1/admin/cross-compatibility", () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          donor_id: "donor_raju",
+          donor_name: "Raju Prasad",
+          blood_type: "B+",
+          compatibility_score: 100,
+          distance_km: 2.1,
+          patient_id: DEMO.PRIYA_ID,
+          patient_name: "Priya Sharma",
+          patient_blood_type: "B+",
+          status: "pending",
+        },
+        {
+          donor_id: "donor_kavya",
+          donor_name: "Kavya Nair",
+          blood_type: "O+",
+          compatibility_score: 88,
+          distance_km: 4.7,
+          patient_id: "patient_arjun_001",
+          patient_name: "Arjun Mehta",
+          patient_blood_type: "O+",
+          status: "pending",
+        },
+        {
+          donor_id: "donor_anand",
+          donor_name: "Anand Patel",
+          blood_type: "A+",
+          compatibility_score: 82,
+          distance_km: 6.3,
+          patient_id: "patient_meena_003",
+          patient_name: "Meena Krishnan",
+          patient_blood_type: "A+",
+          status: "pending",
+        },
+      ],
+      error: null,
+    });
+  }),
+
   // Admin summary metrics
   http.get("*/api/v1/admin/summary", () => {
     return HttpResponse.json({

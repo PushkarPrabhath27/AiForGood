@@ -3,7 +3,12 @@ import { handlers } from "./handlers";
 
 export const worker = setupWorker(...handlers);
 
-export function initMocks() {
-  // MSW disabled — frontend calls real FastAPI backend (RDS database)
-  return Promise.resolve();
+export async function initMocks() {
+  // Start MSW service worker to intercept all API calls with mock data for demo
+  await worker.start({
+    onUnhandledRequest: "bypass", // allow non-mocked requests to pass through
+    serviceWorker: {
+      url: "/mockServiceWorker.js",
+    },
+  });
 }
