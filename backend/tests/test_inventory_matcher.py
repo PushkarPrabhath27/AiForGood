@@ -1,3 +1,4 @@
+from typing import Optional
 from __future__ import annotations
 import logging
 import pytest
@@ -19,8 +20,8 @@ class MockPatient:
         kell_negative: bool = False,
         duffy_negative: bool = False,
         kidd_negative: bool = False,
-        next_transfusion_predicted: datetime | None = None,
-        hb_current: float | None = None,
+        next_transfusion_predicted: Optional[datetime] = None,
+        hb_current: Optional[float] = None,
         hospital_id: str = "hospital-001"
     ):
         self.id = id
@@ -56,8 +57,8 @@ class MockInventory:
         duffy: bool = False,
         kidd: bool = False,
         units_available: int = 0,
-        collection_date: datetime | None = None,
-        expiry_date: datetime | None = None
+        collection_date: Optional[datetime] = None,
+        expiry_date: Optional[datetime] = None
     ):
         self.id = id
         self.bank_id = bank_id

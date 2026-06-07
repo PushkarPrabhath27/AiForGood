@@ -15,8 +15,6 @@ const CityBloodMapInner = dynamic<CityBloodMapInnerProps>(
 );
 
 export function CityBloodMap(props: CityBloodMapInnerProps) {
-  const mapKey = React.useMemo(() => `hyd-blood-map-${Math.random().toString(36).substring(2, 9)}`, []);
-
-  return <CityBloodMapInner key={mapKey} {...props} />;
+  return <CityBloodMapInner key="hyd-blood-map-static" {...props} />;
 }
 

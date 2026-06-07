@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api-client";
 import type { BloodWeatherForecast } from "@/types";
-import { addWeeks, format, startOfWeek } from "date-fns";
+import { addWeeks, format, startOfWeek, differenceInCalendarWeeks } from "date-fns";
 import { Cloud, CloudRain, Sun, CloudLightning } from "lucide-react";
 
 interface BloodWeatherPanelProps {
@@ -22,7 +22,7 @@ interface SeveritySetting {
   pulse?: boolean;
 }
 
-const SEVERITY_CONFIG: Record<"surplus" | "balanced" | "shortage" | "critical", SeveritySetting> = {
+const SEVERITY_CONFIG: Record<BloodWeatherForecast["gap_severity"], SeveritySetting> = {
   surplus: {
     bg: "bg-emerald-500/10 hover:bg-emerald-500/20",
     border: "border-emerald-500/20 hover:border-emerald-500/40",
@@ -51,7 +51,7 @@ const SEVERITY_CONFIG: Record<"surplus" | "balanced" | "shortage" | "critical", 
 };
 
 export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
-  const { data: forecasts = [], isLoading } = useQuery<BloodWeatherForecast[]>({
+  const { data: forecasts = [], isLoading, isError, refetch } = useQuery<BloodWeatherForecast[]>({
     queryKey: ["blood-weather", cityCode],
     queryFn: () => apiGet<BloodWeatherForecast[]>(`/api/v1/weather/${cityCode}`),
     refetchInterval: 300000, // 5 minutes
@@ -68,13 +68,27 @@ export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
       tempGrid[bt] = row;
     });
 
+    // Keep track of fallback columns if date logic fails completely
+    const fallbackMap = new Map<string, number>();
+
     forecasts.forEach((f) => {
-      const weekIndex = WEEKS.findIndex(
-        (w) =>
-          format(addWeeks(startOfWeek(new Date()), w), "yyyy-MM-dd") === f.forecast_week_start
-      );
+      const forecastDate = new Date(f.forecast_week_start);
+      let weekIndex = differenceInCalendarWeeks(forecastDate, new Date());
+      
+      // Fallback: assign columns sequentially if date math is completely out of bounds (e.g. mock data)
+      if (weekIndex < 0 || weekIndex > 3) {
+        const typeCount = fallbackMap.get(f.blood_type) || 0;
+        if (typeCount < 4) {
+          weekIndex = typeCount;
+          fallbackMap.set(f.blood_type, typeCount + 1);
+        }
+      } else {
+        // Also update fallback counter just in case
+        fallbackMap.set(f.blood_type, Math.max(fallbackMap.get(f.blood_type) || 0, weekIndex + 1));
+      }
+
       const row = tempGrid[f.blood_type];
-      if (weekIndex >= 0 && row) {
+      if (weekIndex >= 0 && weekIndex <= 3 && row) {
         row[weekIndex] = f;
       }
     });
@@ -111,11 +125,34 @@ export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-5 gap-1.5 animate-pulse">
-          {Array.from({ length: 45 }).map((_, i) => (
-            <div key={i} className="h-8 bg-slate-900 rounded-lg" />
-          ))}
+      {isError ? (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-center justify-between">
+          <span className="text-red-400 text-sm font-medium">Failed to load forecast data.</span>
+          <button 
+            onClick={() => refetch()} 
+            className="px-4 py-1.5 bg-red-500/10 text-red-400 rounded-lg border border-red-500/20 hover:bg-red-500/20 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      ) : isLoading ? (
+        <div className="overflow-x-auto animate-pulse">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-slate-850">
+                <th className="pb-3 w-12"><div className="h-4 bg-slate-800 rounded w-8"></div></th>
+                {WEEKS.map((w) => <th key={w} className="pb-3 px-2"><div className="h-4 bg-slate-800 rounded mx-auto w-16"></div></th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {BLOOD_TYPES.map((bt) => (
+                <tr key={bt} className="border-b border-slate-900/60 last:border-0">
+                  <td className="py-2.5 pr-4"><div className="h-4 bg-slate-800 rounded w-6"></div></td>
+                  {WEEKS.map((w) => <td key={w} className="px-2 py-1.5"><div className="w-full h-9 bg-slate-800 rounded-xl"></div></td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -151,9 +188,9 @@ export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
                         <div className="relative group flex items-center justify-center">
                           <div
                             className={`
-                              w-full h-9 rounded-xl border flex items-center justify-center transition-all duration-300 cursor-help
+                              w-full h-9 rounded-xl border flex items-center justify-center transition-all duration-300 ${f ? "cursor-help" : "cursor-default"}
                               ${cfg.bg} ${cfg.border}
-                              ${cfg.pulse ? "animate-pulse" : ""}
+                              ${cfg.pulse === true ? "animate-pulse" : ""}
                             `}
                           >
                             <span className={cfg.text}>{cfg.icon}</span>
@@ -184,7 +221,9 @@ export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
                                   >
                                     {f.gap_units > 0
                                       ? `+${f.gap_units} units shortage`
-                                      : `${Math.abs(f.gap_units)} units surplus`}
+                                      : f.gap_units < 0
+                                      ? `-${Math.abs(f.gap_units)} units surplus`
+                                      : `Balanced`}
                                   </span>
                                 </div>
                               </div>

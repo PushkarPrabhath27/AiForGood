@@ -27,8 +27,8 @@ class Patient(BaseModel):
     enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     adherence_risk: Mapped[str] = mapped_column(String(10), default="low", nullable=False)
     
-    next_transfusion_predicted: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    hb_current: Mapped[float | None] = mapped_column(nullable=True)
+    next_transfusion_predicted: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    hb_current: Mapped[Optional[float]] = mapped_column(nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
 
     # Relationships mapped with selectin loading to prevent N+1 queries in the endpoints

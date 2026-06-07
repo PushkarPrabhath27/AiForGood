@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import Optional
 class RaktaSetuException(Exception):
     """Base class for all domain-specific exceptions in RaktaSetu NOOR."""
     status_code: int = 500
     detail: str = "An unexpected error occurred in the system."
 
-    def __init__(self, detail: str | None = None) -> None:
+    def __init__(self, detail: Optional[str] = None) -> None:
         if detail:
             self.detail = detail
         super().__init__(self.detail)

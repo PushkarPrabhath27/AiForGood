@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCityInventory, useApproveMatch } from "@/lib/hooks/useCityInventory";
 import { CityBloodMap } from "@/components/grid/CityBloodMap";
 import { CityHealthScore } from "@/components/grid/CityHealthScore";
@@ -30,6 +31,8 @@ export default function RaktaGridDashboardPage() {
   const [selectedBankId, setSelectedBankId] = React.useState<string | null>(null);
   const [activeMatchId, setActiveMatchId] = React.useState<string | null>(null);
   const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
+  const [showAllMatches, setShowAllMatches] = React.useState(false);
+  const queryClient = useQueryClient();
 
   // Parse API payload values
   const payload = response?.data;
@@ -91,6 +94,7 @@ export default function RaktaGridDashboardPage() {
     try {
       await approveMutation.mutateAsync(activeMatchId);
       toast.success("Transfer approved successfully. Stored stock levels decremented.");
+      queryClient.invalidateQueries({ queryKey: ["city-inventory", cityCode] });
       setApprovalModalOpen(false);
       setActiveMatchId(null);
     } catch (err: any) {
@@ -126,7 +130,7 @@ export default function RaktaGridDashboardPage() {
           <BloodWeatherPanel cityCode={cityCode} />
 
           {/* CartoDB Nightwatch Map */}
-          <div className="flex-1 min-h-[450px] relative rounded-3xl overflow-hidden border border-slate-850 shadow-2xl">
+          <div className="w-full rounded-xl overflow-hidden border border-slate-700 relative" style={{ height: '420px' }}>
             <CityBloodMap
               bloodBanks={bloodBanks}
               matchedBankIds={matchedBankIds}
@@ -148,32 +152,55 @@ export default function RaktaGridDashboardPage() {
         <div className="flex flex-col gap-6 h-full min-h-[600px]">
           
           {/* Vikram's Golden Match card */}
-          {activeMatches.map((match) => (
-            <InventoryMatchCard
-              key={match.id}
-              match={match}
-              onApprove={handleMatchClick}
-            />
-          ))}
+          {(() => {
+            const pendingMatches = activeMatches.filter((m) => m.status === "pending");
+            const visibleMatches = showAllMatches ? pendingMatches : pendingMatches.slice(0, 5);
+            
+            return (
+              <>
+                {pendingMatches.length > 0 && (
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-slate-600">
+                    {visibleMatches.map((match) => (
+                      <InventoryMatchCard
+                        key={match.id}
+                        match={match}
+                        onApprove={handleMatchClick}
+                      />
+                    ))}
+                    {pendingMatches.length > 5 && (
+                      <div className="text-center pt-2 pb-1">
+                        <button
+                          onClick={() => setShowAllMatches((v) => !v)}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 underline font-medium cursor-pointer"
+                        >
+                          {showAllMatches ? "Show less" : `Show ${pendingMatches.length - 5} more`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-          {/* Fallback cross-patient donor pool routing list */}
-          {isMobilizationFailed && (
-            <CrossPatientDonorPool
-              cityCode={cityCode}
-              patientId={DEMO.VIKRAM_ID}
-              patientName="Vikram Reddy"
-            />
-          )}
+                {/* Fallback cross-patient donor pool routing list */}
+                {isMobilizationFailed && (
+                  <CrossPatientDonorPool
+                    cityCode={cityCode}
+                    patientId={DEMO.VIKRAM_ID}
+                    patientName="Vikram Reddy"
+                  />
+                )}
 
-          {activeMatches.length === 0 && (
-            <div className="p-5 rounded-3xl bg-slate-900/40 border border-slate-850 flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
-              <div className="text-xs">
-                <h4 className="font-bold text-slate-200">No Pending Lifelines</h4>
-                <p className="text-slate-500 font-medium">All patient extended phenotype allocations synced.</p>
-              </div>
-            </div>
-          )}
+                {pendingMatches.length === 0 && (
+                  <div className="p-5 rounded-3xl bg-slate-900/40 border border-slate-850 flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                    <div className="text-xs">
+                      <h4 className="font-bold text-slate-200">No Pending Lifelines</h4>
+                      <p className="text-slate-500 font-medium">All patient extended phenotype allocations synced.</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Detail inventory list panel */}
           <div className="flex-1 min-h-[300px]">

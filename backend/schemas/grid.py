@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, date
-from typing import List, Dict, Literal
+from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 class BloodBankNodeSchema(BaseModel):
@@ -15,7 +15,7 @@ class BloodBankNodeSchema(BaseModel):
     status: Literal["green", "yellow", "red"] = "green"
     inventory_summary: Dict[str, int] = Field(default_factory=dict)
     is_stale: bool = False
-    last_sync_at: datetime | None = None
+    last_sync_at: Optional[datetime] = None
 
 class TypeCoverageSchema(BaseModel):
     """Schema tracking coverage performance metrics for specific blood groups."""

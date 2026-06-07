@@ -172,8 +172,8 @@ def calculate_circle_health(guardians: List[Guardian], patient_id: str = "") -> 
     real_guardians = [g for g in guardians if g.status != "empty"]
     real_count = len(real_guardians)
     
-    # 1. Coverage Score (non-empty slots / 8 * 100)
-    coverage = round((real_count / 8.0) * 100.0, 1)
+    # 1. Coverage Score (non-empty slots / 8 * 100), capped at 100%
+    coverage = min(100.0, round((real_count / 8.0) * 100.0, 1))
     
     # 2. Engagement Score (responsiveness latency scale)
     if real_count > 0:

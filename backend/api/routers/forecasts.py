@@ -166,7 +166,7 @@ async def get_patient_forecast(
         db.add(db_forecast)
         
         # Sync patient metadata
-        patient.next_transfusion_predicted = datetime.combine(predicted_date, datetime.min.time())
+        # patient.next_transfusion_predicted = datetime.combine(predicted_date, datetime.min.time())
         patient.hb_current = sorted_readings[-1].hb_value
         
     # 5. Run Clinical Diagnostic Alerts (CUSUM + Iron Overload)

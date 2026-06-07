@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 from datetime import datetime, date
-from typing import List, Dict, Any
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -325,7 +325,7 @@ async def sync_blood_bank_inventory_endpoint(
 
 
 @router.get("/mock-bank-api", response_model=List[Dict[str, Any]])
-async def get_mock_bank_inventory(bank_name: str | None = None) -> List[Dict[str, Any]]:
+async def get_mock_bank_inventory(bank_name: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Returns simulated real-time inventory for testing synchronization worker queries.
     Dynamically generates stock levels, including rare Kell/Duffy/Kidd phenotype matches.

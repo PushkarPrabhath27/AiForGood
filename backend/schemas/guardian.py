@@ -58,7 +58,7 @@ class GuardianCircleResponse(BaseModel):
     engagement_score: float = Field(..., ge=0.0, le=100.0)
     resilience_score: float = Field(..., ge=0.0, le=100.0)
     mobilization_status: str
-    days_to_transfusion: Optional[int] = None  # Ensure int | None compatibility
+    days_to_transfusion: Optional[int] = None  # Ensure Optional[int] compatibility
     guardians: List[GuardianSchema]
 
 

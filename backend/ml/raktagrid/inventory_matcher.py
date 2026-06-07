@@ -73,7 +73,7 @@ def optimize_matches(
     patients: List[Any],
     inventory: List[Any],
     banks: List[Any],
-    reference_date: datetime | None = None
+    reference_date: Optional[datetime] = None
 ) -> List[Dict[str, Any]]:
     """
     Solves the city-wide inventory assignment problem using Google OR-Tools CP-SAT.
@@ -87,7 +87,7 @@ def optimize_matches(
         patients (List[Any]): List of patient records with upcoming transfusion dates.
         inventory (List[Any]): List of available blood bank inventory batches.
         banks (List[Any]): List of blood bank records with coordinates.
-        reference_date (datetime | None): Optional reference date representing "today".
+        reference_date (Optional[datetime]): Optional reference date representing "today".
                                           Defaults to datetime(2024, 10, 20, 10, 0, 0).
 
     Returns:

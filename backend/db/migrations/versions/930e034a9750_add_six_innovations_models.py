@@ -31,8 +31,8 @@ def upgrade() -> None:
     sa.Column('generated_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('model_confidence', sa.Float(), nullable=False),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')
     )
@@ -49,8 +49,8 @@ def upgrade() -> None:
     sa.Column('caregiver_concern_level', sa.Enum('none', 'mild', 'high', name='concernlevel'), nullable=False),
     sa.Column('processed_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['patient_id'], ['patients.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')
@@ -64,8 +64,8 @@ def upgrade() -> None:
     sa.Column('transition_message_sent', sa.Boolean(), nullable=False),
     sa.Column('status', sa.Enum('initiated', 'replacement_found', 'completed', 'failed', name='repairstatus'), nullable=False),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['departing_guardian_id'], ['guardians.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['patient_id'], ['patients.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['replacement_guardian_id'], ['guardians.id'], ondelete='SET NULL'),
@@ -80,8 +80,8 @@ def upgrade() -> None:
     sa.Column('reengagement_attempted', sa.Boolean(), nullable=False),
     sa.Column('reengagement_sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['guardian_id'], ['guardians.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('guardian_id'),
@@ -97,8 +97,8 @@ def upgrade() -> None:
     sa.Column('response_type', sa.Enum('confirmed', 'declined', 'no_response', name='responsetype'), nullable=False),
     sa.Column('message_channel', sa.String(length=20), nullable=False),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['guardian_id'], ['guardians.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['patient_id'], ['patients.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
@@ -114,8 +114,8 @@ def upgrade() -> None:
     sa.Column('transition_consent_given', sa.Boolean(), nullable=False),
     sa.Column('transition_patient_id', sa.String(length=36), nullable=True),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['guardian_id'], ['guardians.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['patient_id'], ['patients.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['transition_patient_id'], ['patients.id'], ondelete='SET NULL'),
@@ -132,44 +132,44 @@ def upgrade() -> None:
     sa.Column('recommended_action', sa.String(length=500), nullable=False),
     sa.Column('coordinator_notified', sa.Boolean(), nullable=False),
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['patient_id'], ['patients.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['triggering_checkin_id'], ['caregiver_checkins.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')
     )
-    op.create_unique_constraint(None, 'alerts', ['id'])
-    op.create_unique_constraint(None, 'blood_banks', ['id'])
-    op.create_unique_constraint(None, 'forecasts', ['id'])
+
+
+
     op.add_column('guardians', sa.Column('telegram_chat_id', sa.String(length=20), nullable=True))
     op.add_column('guardians', sa.Column('annual_donation_count', sa.Integer(), nullable=False))
     op.add_column('guardians', sa.Column('fatigue_ceiling', sa.Integer(), nullable=False))
     op.add_column('guardians', sa.Column('fatigue_rest_until', sa.Date(), nullable=True))
     op.add_column('guardians', sa.Column('fatigue_notified', sa.Boolean(), nullable=False))
-    op.create_unique_constraint(None, 'guardians', ['id'])
-    op.create_unique_constraint(None, 'hb_readings', ['id'])
-    op.create_unique_constraint(None, 'inventory', ['id'])
+
+
+
     op.add_column('patients', sa.Column('status', sa.String(length=20), nullable=False))
-    op.create_unique_constraint(None, 'patients', ['id'])
+
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_constraint(None, 'patients', type_='unique')
+
     op.drop_column('patients', 'status')
-    op.drop_constraint(None, 'inventory', type_='unique')
-    op.drop_constraint(None, 'hb_readings', type_='unique')
-    op.drop_constraint(None, 'guardians', type_='unique')
+
+
+
     op.drop_column('guardians', 'fatigue_notified')
     op.drop_column('guardians', 'fatigue_rest_until')
     op.drop_column('guardians', 'fatigue_ceiling')
     op.drop_column('guardians', 'annual_donation_count')
     op.drop_column('guardians', 'telegram_chat_id')
-    op.drop_constraint(None, 'forecasts', type_='unique')
-    op.drop_constraint(None, 'blood_banks', type_='unique')
-    op.drop_constraint(None, 'alerts', type_='unique')
+
+
+
     op.drop_table('sentinel_alerts')
     op.drop_table('guardian_memorial_messages')
     op.drop_table('donor_engagement_signals')

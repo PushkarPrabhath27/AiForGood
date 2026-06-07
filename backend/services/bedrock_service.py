@@ -15,8 +15,8 @@ DEFAULT_TEMPERATURE = 0.7
 
 async def invoke_bedrock_converse(
     prompt: str,
-    system_prompt: str | None = None,
-    model_id: str | None = None,
+    system_prompt: Optional[str] = None,
+    model_id: Optional[str] = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
     temperature: float = DEFAULT_TEMPERATURE,
 ) -> str:

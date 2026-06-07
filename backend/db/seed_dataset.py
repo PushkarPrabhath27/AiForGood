@@ -16,6 +16,8 @@ from models.hb_reading import HbReading
 from models.blood_bank import BloodBank
 from models.inventory import Inventory
 from models.forecast import Forecast
+from models.sentinel import CaregiverCheckin, ActivityLevel, ConcernLevel
+import random
 
 # Initialize sync engine and session factory
 engine = create_engine(settings.database_url_sync)
@@ -169,7 +171,10 @@ def seed_dataset():
                 allo = True
                 
             enrolled = parse_date(p['registration_date']) or datetime.utcnow()
-            next_trans = parse_date(p['expected_next_transfusion_date'])
+            
+            # T-15 to T-20 constraint (based on Oct 20, 2024)
+            base_date = datetime(2024, 10, 20)
+            next_trans = base_date + timedelta(days=random.randint(15, 20))
             
             patient = Patient(
                 id=p_id,
@@ -184,7 +189,7 @@ def seed_dataset():
                 hospital_id="hospital-001",
                 enrolled_at=enrolled,
                 next_transfusion_predicted=next_trans,
-                hb_current=float(p['quantity_required']) + 6.0 if p['quantity_required'] else 7.5,
+                hb_current=round(random.uniform(4.5, 11.5), 1),
                 status="active"
             )
             db_patients.append(patient)
@@ -197,15 +202,14 @@ def seed_dataset():
         print("Seeding Guardians...")
         donor_rows = [r for r in rows if r['role'].lower() in ['bridge donor', 'emergency donor', 'volunteer', 'other']]
         
-        db_guardians = []
-        seeded_donor_ids = set()
+        db_guardians = {}
         
         for idx, d in enumerate(donor_rows, 1):
             csv_user_id = d['user_id']
             csv_bridge_id = d['bridge_id']
             
-            d_id = get_stable_uuid(csv_user_id)
-            if d_id in seeded_donor_ids:
+            d_id = get_stable_uuid(csv_user_id) or str(uuid.uuid4())
+            if d_id in db_guardians:
                 continue
                 
             # Determine linked patient
@@ -269,11 +273,21 @@ def seed_dataset():
                 reliability_score=85 if donation_count > 2 else 70,
                 geography_score=90
             )
-            db_guardians.append(guardian)
-            db.add(guardian)
-            seeded_donor_ids.add(d_id)
+            db_guardians[d_id] = guardian
 
-        db.flush()
+        print(f"Total guardians prepared: {len(db_guardians)}")
+        db_guardians_list = list(db_guardians.values())
+        print(f"Total unique IDs in list: {len(set(g.id for g in db_guardians_list))}")
+        
+        # Test adding them one by one to find the culprit
+        for g in db_guardians_list:
+            db.add(g)
+            try:
+                db.flush()
+            except Exception as e:
+                db.rollback()
+                print(f"Failed on Guardian ID {g.id}: {e}")
+                sys.exit(1)
         print(f"Successfully staged {len(db_guardians)} guardians.")
 
         # 4. Seed 5 Blood Banks in Hyderabad (for RaktaGrid Map discovery)
@@ -359,6 +373,45 @@ def seed_dataset():
             db.add(HbReading(patient_id=VIKRAM_ID, hb_value=c["pre"], reading_date=c_date, post_transfusion=False))
             db.add(HbReading(patient_id=VIKRAM_ID, hb_value=c["post"], reading_date=c_date + timedelta(days=1), post_transfusion=True, units_transfused=c["units"], hb_rise_per_unit=round((c["post"] - c["pre"])/c["units"], 2)))
         db.add(HbReading(patient_id=VIKRAM_ID, hb_value=6.8, reading_date=datetime.utcnow() - timedelta(days=1), post_transfusion=False))
+
+        # 8. Add synthetic readings & check-ins for all other patients
+        print("Seeding synthetic historic Hb readings and CaregiverCheckins for all non-demo patients...")
+        for pt in db_patients:
+            if pt.id in [PRIYA_ID, VIKRAM_ID, EMERGENCY_POOL_PATIENT_ID]:
+                continue
+                
+            # Synthesize HbReadings (Sawtooth pattern)
+            start_date = datetime.utcnow() - timedelta(days=21*3)
+            for i in range(3):
+                c_date = start_date + timedelta(days=21*i)
+                pre_hb = round(random.uniform(5.5, 7.5), 1)
+                post_hb = round(pre_hb + random.uniform(1.5, 3.5), 1)
+                units = random.randint(1, 2)
+                
+                db.add(HbReading(patient_id=pt.id, hb_value=pre_hb, reading_date=c_date, post_transfusion=False))
+                db.add(HbReading(patient_id=pt.id, hb_value=post_hb, reading_date=c_date + timedelta(days=1), post_transfusion=True, units_transfused=units, hb_rise_per_unit=round((post_hb - pre_hb)/units, 2)))
+                
+            # Final active reading matching their new diverse hb_current
+            db.add(HbReading(patient_id=pt.id, hb_value=pt.hb_current, reading_date=datetime.utcnow() - timedelta(days=random.randint(1, 5)), post_transfusion=False))
+
+            # Synthesize CaregiverCheckin
+            num_checkins = random.randint(1, 3)
+            for i in range(num_checkins):
+                chk_date = datetime.utcnow() - timedelta(days=random.randint(1, 14))
+                act_level = random.choice(list(ActivityLevel))
+                con_level = random.choice(list(ConcernLevel))
+                s_score = random.uniform(0.0, 10.0)
+                
+                db.add(CaregiverCheckin(
+                    patient_id=pt.id,
+                    checkin_date=chk_date,
+                    channel="telegram",
+                    symptom_score=round(s_score, 1),
+                    fatigue_reported=random.choice([True, False]),
+                    appetite_normal=random.choice([True, False]),
+                    activity_level=act_level,
+                    caregiver_concern_level=con_level
+                ))
 
         db.commit()
         print("Database seeding completed successfully.")

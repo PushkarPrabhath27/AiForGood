@@ -52,9 +52,9 @@ def _run_prophet(
         forecast = model.predict(future)
         
         forecast_points: list[ForecastPointSchema] = []
-        predicted_transfusion_date: date | None = None
-        confidence_lower: date | None = None
-        confidence_upper: date | None = None
+        predicted_transfusion_date: Optional[date] = None
+        confidence_lower: Optional[date] = None
+        confidence_upper: Optional[date] = None
         
         for _, row in forecast.iterrows():
             curr_date = row["ds"].date()
@@ -301,9 +301,9 @@ async def generate_forecast(
             )
             decay_rate = 0.25 * risk_multiplier
 
-        predicted_date: date | None = None
-        conf_lower: date | None = None
-        conf_upper: date | None = None
+        predicted_date: Optional[date] = None
+        conf_lower: Optional[date] = None
+        conf_upper: Optional[date] = None
 
         for day in range(1, 61):
             curr_date = latest_date + timedelta(days=day)

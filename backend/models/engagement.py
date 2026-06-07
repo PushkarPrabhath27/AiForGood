@@ -22,8 +22,8 @@ class DonorEngagementSignal(BaseModel):
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
     cycle_number: Mapped[int] = mapped_column(Integer, nullable=False)
     contacted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
-    response_latency_hours: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
+    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    response_latency_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=None)
     response_type: Mapped[ResponseType] = mapped_column(Enum(ResponseType), default=ResponseType.no_response, nullable=False)
     message_channel: Mapped[str] = mapped_column(String(20), default="telegram", nullable=False)
 
@@ -37,9 +37,9 @@ class DonorChurnScore(BaseModel):
     guardian_id: Mapped[str] = mapped_column(String(36), ForeignKey("guardians.id", ondelete="CASCADE"), unique=True, nullable=False)
     cusum_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     engagement_trend: Mapped[EngagementTrend] = mapped_column(Enum(EngagementTrend), default=EngagementTrend.stable, nullable=False)
-    predicted_churn_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    predicted_churn_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, default=None)
     reengagement_attempted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    reengagement_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    reengagement_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     guardian: Mapped["Guardian"] = relationship("Guardian", lazy="selectin")

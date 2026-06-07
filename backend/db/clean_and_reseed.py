@@ -21,15 +21,13 @@ def clean_and_reseed():
         
         # Deleting child tables first to satisfy foreign key constraints
         tables_to_clear = [
-            "sentinel_audit_logs",
-            "sentinel_statuses",
-            "memorial_messages",
-            "circle_repair_logs",
-            "engagement_logs",
+            "sentinel_alerts",
+            "caregiver_checkins",
+            "mood_logs",
             "forecasts",
             "hb_readings",
             "guardians",
-            "inventories",
+            "inventory",
             "blood_banks",
             "patients"
         ]
@@ -39,8 +37,7 @@ def clean_and_reseed():
                 db.execute(text(f"DELETE FROM {table};"))
                 print(f"[*] Cleared table: {table}")
             except Exception as e:
-                # Table might not exist or be named differently, rollback and continue
-                db.rollback()
+                # Table might not exist or be named differently, just continue
                 print(f"[-] Skip/Error clearing table {table}: {e}")
                 
         db.commit()
@@ -57,6 +54,11 @@ def clean_and_reseed():
     # Run the seed dataset script
     print("Starting fresh seeding from Dataset.csv...")
     seed_dataset()
+
+    print("Running data constraint fixes (T-X range and 8 guardians per patient)...")
+    import asyncio
+    from scripts.fix_patient_data import fix_data
+    asyncio.run(fix_data())
 
 if __name__ == "__main__":
     clean_and_reseed()

@@ -86,7 +86,7 @@ async def run_hb_forecast_worker(db: AsyncSession) -> Dict[str, Any]:
                 db.add(db_forecast)
 
                 # 6. Sync patient model metadata
-                patient.next_transfusion_predicted = datetime.combine(predicted_date, datetime.min.time())
+                # patient.next_transfusion_predicted = datetime.combine(predicted_date, datetime.min.time())
                 patient.hb_current = sorted_readings[-1].hb_value
                 db.add(patient)
 

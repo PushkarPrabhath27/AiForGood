@@ -235,7 +235,7 @@ async def get_sentinel_status(
 
     status_data = SentinelStatusSchema(
         patient_id=patient_id,
-        sentinel_score=round(latest_checkin.symptom_score * 100),
+        sentinel_score=round((latest_checkin.symptom_score / 10.0) * 100),
         last_checkin=checkin_schema,
         alert_active=alert_active,
         recommended_action=recommended_action,

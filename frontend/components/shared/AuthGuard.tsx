@@ -56,7 +56,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         setIsAuthenticated(true);
       } catch (err) {
         setIsAuthenticated(false);
-        if (pathname !== "/auth") {
+        if (!pathname.startsWith("/auth")) {
           router.push("/auth");
         }
       }

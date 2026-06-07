@@ -157,7 +157,12 @@ export function CityBloodMapInner({
     // Clean up on mount (handles React 18/19 Strict Mode double mount reuse)
     cleanStaleLeafletIds();
 
+    const resizeTimer = setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 100);
+
     return () => {
+      clearTimeout(resizeTimer);
       cleanStaleLeafletIds();
     };
   }, []);
@@ -183,8 +188,8 @@ export function CityBloodMapInner({
       >
         <MapInstanceTracker mapRef={mapRef} />
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           opacity={0.65}
         />
 

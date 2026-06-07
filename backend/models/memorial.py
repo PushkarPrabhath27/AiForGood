@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import datetime
 import enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -15,9 +16,9 @@ class CircleRepairLog(BaseModel):
     
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
     departing_guardian_id: Mapped[str] = mapped_column(String(36), ForeignKey("guardians.id", ondelete="CASCADE"), nullable=False)
-    replacement_guardian_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("guardians.id", ondelete="SET NULL"), nullable=True, default=None)
+    replacement_guardian_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("guardians.id", ondelete="SET NULL"), nullable=True, default=None)
     repair_initiated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-    repair_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    repair_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     transition_message_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[RepairStatus] = mapped_column(Enum(RepairStatus), default=RepairStatus.initiated, nullable=False)
 
@@ -36,7 +37,7 @@ class GuardianMemorialMessage(BaseModel):
     message_text: Mapped[str] = mapped_column(Text, nullable=False)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     transition_consent_given: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    transition_patient_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("patients.id", ondelete="SET NULL"), nullable=True, default=None)
+    transition_patient_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("patients.id", ondelete="SET NULL"), nullable=True, default=None)
 
     # Relationships
     patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id], lazy="selectin")

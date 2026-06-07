@@ -41,7 +41,7 @@ class Guardian(BaseModel):
     # Donor Fatigue Tracking
     annual_donation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     fatigue_ceiling: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
-    fatigue_rest_until: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    fatigue_rest_until: Mapped[Optional[date]] = mapped_column(Date, nullable=True, default=None)
     fatigue_notified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     patient: Mapped["Patient"] = relationship("Patient", back_populates="guardians")
