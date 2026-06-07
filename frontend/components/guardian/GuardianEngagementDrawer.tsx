@@ -51,7 +51,7 @@ export function GuardianEngagementDrawer({
   }, [guardian]);
 
   const reengageMutation = useMutation({
-    mutationFn: () => apiPost<unknown>(`/api/v1/guardians/${guardian?.id}/reengage`, {}),
+    mutationFn: () => apiPost<unknown>(`/guardians/${guardian?.id}/reengage`, {}),
     onSuccess: () => {
       toast.success(`Re-engagement campaign dispatched to ${guardian?.name}`);
       setEngagementLog((prev) => [

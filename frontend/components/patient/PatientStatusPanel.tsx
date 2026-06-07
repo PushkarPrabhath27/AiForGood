@@ -61,7 +61,7 @@ export function PatientStatusPanel({
 
   const updateMutation = useMutation({
     mutationFn: (newStatus: PatientStatus) =>
-      apiPost<unknown>(`/api/v1/patients/${patientId}/status`, { status: newStatus }),
+      apiPost<unknown>(`/patients/${patientId}/status`, { status: newStatus }),
     onSuccess: (data, newStatus) => {
       if (newStatus === "deceased") {
         toast.success(

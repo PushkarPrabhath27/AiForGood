@@ -14,7 +14,7 @@ interface SentinelPanelProps {
 export function SentinelPanel({ patientId }: SentinelPanelProps) {
   const { data: sentinel, isLoading, isError, refetch } = useQuery({
     queryKey: ["sentinel", patientId],
-    queryFn: () => apiGet<SentinelStatus>(`/api/v1/sentinel/${patientId}`),
+    queryFn: () => apiGet<SentinelStatus>(`/sentinel/${patientId}`),
     refetchInterval: 60_000, // refresh every minute
   });
 

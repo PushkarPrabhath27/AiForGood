@@ -42,14 +42,13 @@ export function CrossPatientDonorPool({
 
   const { data: matches = [], isLoading, error } = useQuery<CrossPatientMatch[]>({
     queryKey: ["cross-patient-matches", cityCode],
-    queryFn: () =>
-      apiGet<CrossPatientMatch[]>(`/api/v1/graph/city/${cityCode}/cross-patient-matches`),
+    queryFn: () => apiGet<CrossPatientMatch[]>(`/graph/city/${cityCode}/cross-patient-matches`),
     refetchInterval: 60000, // Refresh every minute
   });
 
   const routeMutation = useMutation({
     mutationFn: (variables: { donorId: string; donorName: string }) =>
-      apiPost<unknown>("/api/v1/graph/route", {
+      apiPost<unknown>("/graph/route", {
         donor_id: variables.donorId,
         patient_id: patientId,
       }),

@@ -53,7 +53,7 @@ const SEVERITY_CONFIG: Record<BloodWeatherForecast["gap_severity"], SeveritySett
 export function BloodWeatherPanel({ cityCode }: BloodWeatherPanelProps) {
   const { data: forecasts = [], isLoading, isError, refetch } = useQuery<BloodWeatherForecast[]>({
     queryKey: ["blood-weather", cityCode],
-    queryFn: () => apiGet<BloodWeatherForecast[]>(`/api/v1/weather/${cityCode}`),
+    queryFn: () => apiGet<BloodWeatherForecast[]>(`/weather/${cityCode}`),
     refetchInterval: 300000, // 5 minutes
   });
 
