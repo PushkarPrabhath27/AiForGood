@@ -113,7 +113,7 @@ async def discover_and_seed_entities(db: AsyncSession) -> Dict[str, Any]:
         if not existing:
             # Construct a local mock api_endpoint URL referencing this bank's name
             encoded_name = urllib.parse.quote(name)
-            mock_endpoint = f"http://localhost:8000/api/v1/grid/mock-bank-api?bank_name={encoded_name}"
+            mock_endpoint = f"http://localhost:8001/api/v1/grid/mock-bank-api?bank_name={encoded_name}"
 
             new_bank = BloodBank(
                 name=name,

@@ -33,6 +33,7 @@ export const mockPatients: Patient[] = [
     next_transfusion_predicted: "2024-11-03",
     hb_current: 7.2,
     status: "active",
+    adherence_risk: "low",
   },
   {
     id: DEMO.VIKRAM_ID,
@@ -50,6 +51,7 @@ export const mockPatients: Patient[] = [
     next_transfusion_predicted: "2024-11-07",
     hb_current: 6.8,
     status: "active",
+    adherence_risk: "high",
   },
 ];
 
