@@ -275,6 +275,18 @@ async def handle_telegram_webhook(
         telegram_user_id = cq.get("from", {}).get("id")
         callback_data = cq.get("data", "")
         sender_name = cq.get("from", {}).get("first_name", "")
+        
+        # Acknowledge the callback query immediately to stop the loading spinner
+        callback_id = cq.get("id")
+        if callback_id and settings.telegram_bot_token:
+            import httpx
+            import asyncio
+            async def _answer_cb(cb_id: str):
+                url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/answerCallbackQuery"
+                async with httpx.AsyncClient() as client:
+                    await client.post(url, json={"callback_query_id": cb_id})
+            asyncio.create_task(_answer_cb(callback_id))
+            
         logger.info(
             "parsed_telegram_callback_query",
             user_id=telegram_user_id,
